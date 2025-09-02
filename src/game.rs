@@ -9,6 +9,7 @@ use crate::projectile;
 use crate::random;
 use crate::resolution;
 use crate::score;
+use crate::shields;
 use crate::title;
 pub struct GamePlugin;
 
@@ -25,6 +26,7 @@ impl Plugin for GamePlugin {
             title::TitlePlugin,
             assets::AssetsPlugin,
             score::ScorePlugin,
+            shields::ShieldsPlugin,
         ))
         .add_systems(Startup, setup_scene);
     }

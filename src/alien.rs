@@ -85,7 +85,7 @@ fn spawn_aliens(
     }
 }
 
-fn advance_aliens_horizontally(
+pub fn advance_aliens_horizontally(
     mut alien_query: Query<&mut Transform, (With<Alien>, Without<Dead>)>,
     mut alien_manager: ResMut<AlienManager>,
     resolution: Res<resolution::Resolution>,
@@ -105,7 +105,7 @@ fn advance_aliens_horizontally(
     }
 }
 
-fn adjust_alien_formation(
+pub fn adjust_alien_formation(
     mut alien_query: Query<(Entity, &mut Alien, &mut Transform), Without<Dead>>,
     mut alien_manager: ResMut<AlienManager>,
 ) {

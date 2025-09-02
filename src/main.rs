@@ -12,6 +12,7 @@ pub mod projectile;
 pub mod random;
 pub mod resolution;
 pub mod score;
+pub mod shields;
 pub mod title;
 
 fn main() {

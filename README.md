@@ -13,3 +13,6 @@ https://github.com/Biped-Potato/bevy_space_invaders/tree/master
 But I never actually forked. I just used it as a starter and then expanded on it and rearranged a bunch of stuff.
 
 I share this an educational exercise as it will hopefully end up covering a lot of basic ground common to creating a 2d game in Bevy.
+
+## Fonts
+This project uses the space_invaders.ttf font by chriswal1200, licensed under the SIL Open Font License, Version 1.1. See `assets/fonts/space_invaders/license.txt` for license details.

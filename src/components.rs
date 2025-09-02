@@ -31,6 +31,7 @@ pub enum ColliderSource {
     PlayerBullet,
     Alien,
     AlienBullet,
+    Shield,
     None, // For entities that aren't projectiles, like the player or aliens themselves
 }
 
