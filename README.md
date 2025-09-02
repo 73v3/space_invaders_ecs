@@ -16,3 +16,6 @@ I share this an educational exercise as it will hopefully end up covering a lot 
 
 ## Fonts
 This project uses the space_invaders.ttf font by chriswal1200, licensed under the SIL Open Font License, Version 1.1. See `assets/fonts/space_invaders/license.txt` for license details.
+
+## Sfx
+https://ronjeffries.com/articles/020-invaders-30ff/i-37/ (see download zip for sfx files to be placed in assets/sfx folder)

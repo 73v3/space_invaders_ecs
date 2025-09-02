@@ -3,6 +3,7 @@ use bevy::prelude::*;
 //link our modules to our project
 pub mod alien;
 pub mod assets;
+pub mod audio;
 pub mod collate_src;
 pub mod components;
 pub mod custom_window_plugin;

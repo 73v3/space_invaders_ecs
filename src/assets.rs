@@ -1,5 +1,6 @@
 // assets.rs
 use crate::components::GameState;
+use bevy::audio::AudioSource;
 use bevy::prelude::*;
 
 pub struct AssetsPlugin;
@@ -17,6 +18,8 @@ pub struct GameAssets {
     pub bullet_texture: Handle<Image>,
     pub shield_texture: Handle<Image>,
     pub font: Handle<Font>,
+    pub shoot_sfx: Handle<AudioSource>,
+    pub alien_killed_sfx: Handle<AudioSource>,
 }
 
 fn load_assets(
@@ -30,6 +33,8 @@ fn load_assets(
         bullet_texture: asset_server.load("bullet.png"),
         shield_texture: asset_server.load("shield.png"),
         font: asset_server.load("fonts/space_invaders/space-invaders-full-version.ttf"),
+        shoot_sfx: asset_server.load("sfx/shoot.wav"),
+        alien_killed_sfx: asset_server.load("sfx/invaderkilled.wav"),
     });
     next_state.set(GameState::Title);
 }

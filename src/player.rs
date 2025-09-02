@@ -1,4 +1,5 @@
 use crate::assets::GameAssets;
+use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, Velocity};
 use crate::resolution;
 use bevy::prelude::*;
@@ -87,6 +88,9 @@ fn update_player(
 
         if keys.pressed(KeyCode::Space) && player.shoot_timer <= 0. {
             player.shoot_timer = SHOOT_COOLDOWN;
+
+            // Play the shoot sound effect
+            audio::play(&mut commands, game_assets.shoot_sfx.clone());
 
             commands.spawn((
                 Sprite {

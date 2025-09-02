@@ -76,7 +76,7 @@ fn spawn_aliens(
                     original_position: position,
                 },
                 Collider {
-                    radius: 24.,
+                    radius: 16.,
                     source: ColliderSource::Alien,
                 },
                 GameEntity,

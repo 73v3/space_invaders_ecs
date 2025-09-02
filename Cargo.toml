@@ -6,12 +6,13 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.16.1", features = [
     "png",
+    "wav",
     "bevy_sprite",
     "bevy_audio",
     "dynamic_linking",
 ] }
 
-
+rand = "0.9"
 rand_core = "0.9"
 bevy_rand = { version = "0.11", features = ["rand_chacha", "wyrand"] }
 

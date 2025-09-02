@@ -77,7 +77,7 @@ fn spawn_aliens(
                     original_position: position,
                 },
                 Collider {
-                    radius: 24.,
+                    radius: 16.,
                     source: ColliderSource::Alien,
                 },
                 GameEntity,
@@ -168,6 +168,7 @@ fn fire_alien_bullets(
 <assets.rs>
 // assets.rs
 use crate::components::GameState;
+use bevy::audio::AudioSource;
 use bevy::prelude::*;
 
 pub struct AssetsPlugin;
@@ -185,6 +186,8 @@ pub struct GameAssets {
     pub bullet_texture: Handle<Image>,
     pub shield_texture: Handle<Image>,
     pub font: Handle<Font>,
+    pub shoot_sfx: Handle<AudioSource>,
+    pub alien_killed_sfx: Handle<AudioSource>,
 }
 
 fn load_assets(
@@ -198,10 +201,32 @@ fn load_assets(
         bullet_texture: asset_server.load("bullet.png"),
         shield_texture: asset_server.load("shield.png"),
         font: asset_server.load("fonts/space_invaders/space-invaders-full-version.ttf"),
+        shoot_sfx: asset_server.load("sfx/shoot.wav"),
+        alien_killed_sfx: asset_server.load("sfx/invaderkilled.wav"),
     });
     next_state.set(GameState::Title);
 }
 </assets.rs>
+
+<audio.rs>
+// audio.rs
+use bevy::audio::{AudioPlayer, PlaybackSettings};
+use bevy::prelude::*;
+
+pub struct AudioPlugin;
+
+impl Plugin for AudioPlugin {
+    fn build(&self, _app: &mut App) {
+        // No additional setup needed, as AudioPlugin is included in DefaultPlugins
+    }
+}
+
+/// Plays a sound effect by spawning an entity that will despawn automatically after playback.
+/// This is efficient for one-shot SFX and handles cleanup to avoid entity buildup.
+pub fn play(commands: &mut Commands, audio: Handle<AudioSource>) {
+    commands.spawn((AudioPlayer::new(audio), PlaybackSettings::DESPAWN));
+}
+</audio.rs>
 
 <components.rs>
 use bevy::prelude::*;
@@ -320,6 +345,7 @@ use bevy::prelude::*;
 
 use crate::alien;
 use crate::assets;
+use crate::audio;
 use crate::collate_src;
 use crate::components;
 use crate::player;
@@ -345,6 +371,7 @@ impl Plugin for GamePlugin {
             assets::AssetsPlugin,
             score::ScorePlugin,
             shields::ShieldsPlugin,
+            audio::AudioPlugin,
         ))
         .add_systems(Startup, setup_scene);
     }
@@ -360,6 +387,7 @@ use bevy::prelude::*;
 //link our modules to our project
 pub mod alien;
 pub mod assets;
+pub mod audio;
 pub mod collate_src;
 pub mod components;
 pub mod custom_window_plugin;
@@ -381,6 +409,7 @@ fn main() {
 
 <player.rs>
 use crate::assets::GameAssets;
+use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, Velocity};
 use crate::resolution;
 use bevy::prelude::*;
@@ -470,6 +499,9 @@ fn update_player(
         if keys.pressed(KeyCode::Space) && player.shoot_timer <= 0. {
             player.shoot_timer = SHOOT_COOLDOWN;
 
+            // Play the shoot sound effect
+            audio::play(&mut commands, game_assets.shoot_sfx.clone());
+
             commands.spawn((
                 Sprite {
                     image: game_assets.bullet_texture.clone(),
@@ -506,6 +538,8 @@ fn player_death_handler(
 
 <projectile.rs>
 // projectile.rs
+use crate::assets::GameAssets;
+use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameState, Velocity};
 use crate::player::PlayerDied;
 use crate::resolution;
@@ -533,6 +567,7 @@ fn update_collisions(
         (With<Collider>, Without<Velocity>, Without<Dead>),
     >,
     resolution: Res<resolution::Resolution>,
+    game_assets: Res<GameAssets>,
 ) {
     for (projectile_entity, projectile_transform, projectile_collider) in projectile_query.iter() {
         // Check if projectile is out of bounds, either above or below screen y boundary
@@ -574,6 +609,7 @@ fn update_collisions(
                         && collider_collider.source == ColliderSource::Alien
                     {
                         alien_killed_events.write(AlienKilled);
+                        audio::play(&mut commands, game_assets.alien_killed_sfx.clone());
                     }
                 }
                 break;

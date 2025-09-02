@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::alien;
 use crate::assets;
+use crate::audio;
 use crate::collate_src;
 use crate::components;
 use crate::player;
@@ -27,6 +28,7 @@ impl Plugin for GamePlugin {
             assets::AssetsPlugin,
             score::ScorePlugin,
             shields::ShieldsPlugin,
+            audio::AudioPlugin,
         ))
         .add_systems(Startup, setup_scene);
     }
