@@ -33,7 +33,7 @@ fn setup_player(
     commands.spawn((
         Sprite {
             image: game_assets.player_texture.clone(),
-            color: game_assets.palette.colors[0],
+            color: game_assets.palette.colors[4],
             ..Default::default()
         },
         Transform::from_xyz(
@@ -96,6 +96,7 @@ fn update_player(
             commands.spawn((
                 Sprite {
                     image: game_assets.bullet_texture.clone(),
+                    color: game_assets.palette.colors[3],
                     ..Default::default()
                 },
                 Transform::from_translation(transform.translation)
@@ -104,7 +105,7 @@ fn update_player(
                     velocity: Vec2::new(0., BULLET_SPEED),
                 },
                 Collider {
-                    radius: 24.,
+                    radius: 12.,
                     source: ColliderSource::PlayerBullet,
                 },
                 GameEntity,

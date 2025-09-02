@@ -1,5 +1,7 @@
 use crate::assets::GameAssets;
-use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, Velocity};
+use crate::components::{
+    Collider, ColliderSource, Dead, GameEntity, GameSpeed, GameState, Velocity,
+};
 use crate::random::random_float;
 use crate::resolution;
 use bevy::prelude::*;
@@ -17,6 +19,7 @@ impl Plugin for AlienPlugin {
                     advance_aliens_horizontally,
                     adjust_alien_formation,
                     fire_alien_bullets,
+                    animate_aliens,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -26,6 +29,8 @@ impl Plugin for AlienPlugin {
 #[derive(Component)]
 pub struct Alien {
     pub original_position: Vec3,
+    pub animation_timer: f32,
+    pub current_frame: bool, // false for alien_a, true for alien_b
 }
 
 #[derive(Resource)]
@@ -45,11 +50,11 @@ const ALIEN_SHIFT_AMOUNT: f32 = 12.;
 const BULLET_SPEED: f32 = -200.; // Negative for downward movement
 const FIRE_INTERVAL: f32 = 2.0; // Base interval between firing checks
 const FIRE_PROBABILITY: f32 = 0.05; // 5% chance per alien per check
+const ANIMATION_BASE_SPEED: f32 = 0.5; // Seconds per frame at game_speed = 1.0
 
 fn spawn_aliens(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    //asset_server: Res<AssetServer>,
     resolution: Res<resolution::Resolution>,
 ) {
     commands.insert_resource(AlienManager {
@@ -75,6 +80,8 @@ fn spawn_aliens(
                     .with_scale(Vec3::splat(resolution.pixel_ratio)),
                 Alien {
                     original_position: position,
+                    animation_timer: 0.0,
+                    current_frame: false,
                 },
                 Collider {
                     radius: 16.,
@@ -91,9 +98,11 @@ pub fn advance_aliens_horizontally(
     mut alien_manager: ResMut<AlienManager>,
     resolution: Res<resolution::Resolution>,
     time: Res<Time>,
+    game_speed: Res<GameSpeed>,
 ) {
     for mut transform in alien_query.iter_mut() {
-        transform.translation.x += time.delta_secs() * alien_manager.direction * SPEED;
+        transform.translation.x +=
+            time.delta_secs() * alien_manager.direction * SPEED * game_speed.value;
         if transform.translation.x.abs() > resolution.screen_dimensions.x * 0.5 {
             alien_manager.shift_aliens_down = true;
             alien_manager.dist_from_boundary =
@@ -141,7 +150,6 @@ fn fire_alien_bullets(
     if alien_manager.fire_timer <= 0. {
         alien_manager.fire_timer = FIRE_INTERVAL;
         for transform in alien_query.iter() {
-            //if (rng.next_u32() as f32) / (u32::MAX as f32) < FIRE_PROBABILITY {
             if random_float(&mut rng) < FIRE_PROBABILITY {
                 commands.spawn((
                     Sprite {
@@ -161,6 +169,26 @@ fn fire_alien_bullets(
                     GameEntity,
                 ));
             }
+        }
+    }
+}
+
+fn animate_aliens(
+    mut alien_query: Query<(&mut Alien, &mut Sprite), Without<Dead>>,
+    game_assets: Res<GameAssets>,
+    time: Res<Time>,
+    game_speed: Res<GameSpeed>,
+) {
+    for (mut alien, mut sprite) in alien_query.iter_mut() {
+        alien.animation_timer += time.delta_secs() * game_speed.value;
+        if alien.animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
+            alien.animation_timer = 0.0;
+            alien.current_frame = !alien.current_frame;
+            sprite.image = if alien.current_frame {
+                game_assets.alien_texture_b.clone()
+            } else {
+                game_assets.alien_texture_a.clone()
+            };
         }
     }
 }

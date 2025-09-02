@@ -35,11 +35,16 @@ pub enum ColliderSource {
     None, // For entities that aren't projectiles, like the player or aliens themselves
 }
 
+#[derive(Resource)]
+pub struct GameSpeed {
+    pub value: f32,
+}
+
 pub struct ComponentsPlugin;
 
 impl Plugin for ComponentsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.insert_resource(GameSpeed { value: 1.0 }).add_systems(
             Update,
             (despawn_dead_entities, update_velocity)
                 .chain()
