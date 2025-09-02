@@ -6,7 +6,7 @@ WARNING: This is my very first Rust project. I know NOTHING! Do not mistake the 
 
 At the time of writing, I have been learning Rust and Bevy for a grand total of 7 days.
 
-I am also old and don't understand github properly. This is meant to be a fork of:
+This was originally a fork of:
 
 https://github.com/Biped-Potato/bevy_space_invaders/tree/master
 
