@@ -43,16 +43,35 @@ fn spawn_title(mut commands: Commands, game_assets: Res<GameAssets>) {
         .id();
 
     commands.entity(root).with_children(|parent| {
-        parent.spawn((
-            Text::new("SPACE INVADERS"),
-            TextFont {
-                font: game_assets.font.clone(),
-                font_size: 60.0,
+        parent
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Start,
                 ..default()
-            },
-            TextColor(Color::WHITE),
-            TextLayout::new_with_justify(JustifyText::Center),
-        ));
+            })
+            .with_children(|title_row| {
+                title_row.spawn((
+                    Text::new("SPACE INVADERS"),
+                    TextFont {
+                        font: game_assets.font.clone(),
+                        font_size: 40.0,
+                        ..default()
+                    },
+                    TextColor(game_assets.palette.colors[3]),
+                    TextLayout::new_with_justify(JustifyText::Center),
+                ));
+
+                title_row.spawn((
+                    Text::new("ECS"),
+                    TextFont {
+                        font: game_assets.font.clone(),
+                        font_size: 12.0, // Smaller font size for superscript
+                        ..default()
+                    },
+                    TextColor(game_assets.palette.colors[2]),
+                    TextLayout::new_with_justify(JustifyText::Left),
+                ));
+            });
 
         parent.spawn((
             Text::new("FIRE TO PLAY"),
@@ -61,7 +80,7 @@ fn spawn_title(mut commands: Commands, game_assets: Res<GameAssets>) {
                 font_size: 20.0,
                 ..default()
             },
-            TextColor(Color::WHITE),
+            TextColor(game_assets.palette.colors[4]),
             TextLayout::new_with_justify(JustifyText::Center),
         ));
     });
@@ -90,9 +109,9 @@ fn player_death_to_title(
         next_state.set(GameState::Title);
     }
 }
+
 fn cleanup_game(mut commands: Commands, query: Query<Entity, With<GameEntity>>) {
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
-    //commands.remove_resource::<AlienManager>();
 }

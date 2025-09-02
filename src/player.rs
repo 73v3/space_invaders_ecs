@@ -33,6 +33,7 @@ fn setup_player(
     commands.spawn((
         Sprite {
             image: game_assets.player_texture.clone(),
+            color: game_assets.palette.colors[0],
             ..Default::default()
         },
         Transform::from_xyz(

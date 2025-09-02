@@ -51,6 +51,7 @@ fn spawn_shields(
                 commands.spawn((
                     Sprite {
                         image: game_assets.shield_texture.clone(),
+                        color: game_assets.palette.colors[4],
                         ..Default::default()
                     },
                     Transform::from_translation(Vec3::new(unit_x, unit_y, 0.))

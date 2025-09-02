@@ -19,3 +19,19 @@ This project uses the space_invaders.ttf font by chriswal1200, licensed under th
 
 ## Sfx
 https://ronjeffries.com/articles/020-invaders-30ff/i-37/ (see download zip for sfx files to be placed in assets/sfx folder)
+
+## Palette
+
+https://lospec.com/palette-list/gilt-8
+
+## Disclaimer
+
+This project is for educational purposes only. The assets and code are not intended for commercial use or public distribution outside of learning environments. The creator is not responsible for any misuse of the project or its assets. If you plan to use this project beyond personal learning, ensure all assets are replaced with properly licensed materials.
+
+## Acknowledgments
+
+Inspired by the classic Space Invaders game by Taito.
+
+
+
+Inspired by the classic Space Invaders game by Taito.

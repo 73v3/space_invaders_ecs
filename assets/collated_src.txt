@@ -68,7 +68,8 @@ fn spawn_aliens(
                 + (Vec3::Y * resolution.screen_dimensions.y * 0.5);
             commands.spawn((
                 Sprite {
-                    image: game_assets.alien_texture.clone(),
+                    image: game_assets.alien_texture_a.clone(),
+                    color: game_assets.palette.colors[2],
                     ..Default::default()
                 },
                 Transform::from_translation(position)
@@ -146,6 +147,7 @@ fn fire_alien_bullets(
                 commands.spawn((
                     Sprite {
                         image: game_assets.bullet_texture.clone(),
+                        color: game_assets.palette.colors[3],
                         ..Default::default()
                     },
                     Transform::from_translation(transform.translation)
@@ -154,7 +156,7 @@ fn fire_alien_bullets(
                         velocity: Vec2::new(0., BULLET_SPEED),
                     },
                     Collider {
-                        radius: 24.,
+                        radius: 16.,
                         source: ColliderSource::AlienBullet,
                     },
                     GameEntity,
@@ -179,15 +181,22 @@ impl Plugin for AssetsPlugin {
     }
 }
 
+#[derive(Resource, Clone)]
+pub struct Palette {
+    pub colors: Vec<Color>,
+}
+
 #[derive(Resource)]
 pub struct GameAssets {
-    pub alien_texture: Handle<Image>,
+    pub alien_texture_a: Handle<Image>,
+    pub alien_texture_b: Handle<Image>,
     pub player_texture: Handle<Image>,
     pub bullet_texture: Handle<Image>,
     pub shield_texture: Handle<Image>,
     pub font: Handle<Font>,
     pub shoot_sfx: Handle<AudioSource>,
     pub alien_killed_sfx: Handle<AudioSource>,
+    pub palette: Palette,
 }
 
 fn load_assets(
@@ -195,14 +204,30 @@ fn load_assets(
     asset_server: Res<AssetServer>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
+    let palette = Palette {
+        // https://lospec.com/palette-list/gilt-8 by tomicit0
+        colors: vec![
+            Color::srgb(0.631, 0.224, 0.333),
+            Color::srgb(0.761, 0.431, 0.522),
+            Color::srgb(0.949, 0.729, 0.800),
+            Color::srgb(1.000, 0.949, 0.918),
+            Color::srgb(0.984, 0.906, 0.412),
+            Color::srgb(0.894, 0.725, 0.169),
+            Color::srgb(0.769, 0.416, 0.176),
+            Color::srgb(0.506, 0.173, 0.137),
+        ],
+    };
+
     commands.insert_resource(GameAssets {
-        alien_texture: asset_server.load("alien.png"),
+        alien_texture_a: asset_server.load("alien_a.png"),
+        alien_texture_b: asset_server.load("alien_b.png"),
         player_texture: asset_server.load("player.png"),
         bullet_texture: asset_server.load("bullet.png"),
         shield_texture: asset_server.load("shield.png"),
         font: asset_server.load("fonts/space_invaders/space-invaders-full-version.ttf"),
         shoot_sfx: asset_server.load("sfx/shoot.wav"),
         alien_killed_sfx: asset_server.load("sfx/invaderkilled.wav"),
+        palette,
     });
     next_state.set(GameState::Title);
 }
@@ -443,6 +468,7 @@ fn setup_player(
     commands.spawn((
         Sprite {
             image: game_assets.player_texture.clone(),
+            color: game_assets.palette.colors[0],
             ..Default::default()
         },
         Transform::from_xyz(
@@ -742,7 +768,7 @@ fn setup_score(mut commands: Commands, game_assets: Res<GameAssets>) {
                 font_size: 16.0,
                 ..default()
             },
-            TextColor(Color::WHITE),
+            TextColor(game_assets.palette.colors[3]),
             TextLayout::new_with_justify(JustifyText::Center),
             ScoreText,
         ));
@@ -821,6 +847,7 @@ fn spawn_shields(
                 commands.spawn((
                     Sprite {
                         image: game_assets.shield_texture.clone(),
+                        color: game_assets.palette.colors[4],
                         ..Default::default()
                     },
                     Transform::from_translation(Vec3::new(unit_x, unit_y, 0.))
@@ -899,16 +926,35 @@ fn spawn_title(mut commands: Commands, game_assets: Res<GameAssets>) {
         .id();
 
     commands.entity(root).with_children(|parent| {
-        parent.spawn((
-            Text::new("SPACE INVADERS"),
-            TextFont {
-                font: game_assets.font.clone(),
-                font_size: 60.0,
+        parent
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Start,
                 ..default()
-            },
-            TextColor(Color::WHITE),
-            TextLayout::new_with_justify(JustifyText::Center),
-        ));
+            })
+            .with_children(|title_row| {
+                title_row.spawn((
+                    Text::new("SPACE INVADERS"),
+                    TextFont {
+                        font: game_assets.font.clone(),
+                        font_size: 40.0,
+                        ..default()
+                    },
+                    TextColor(game_assets.palette.colors[3]),
+                    TextLayout::new_with_justify(JustifyText::Center),
+                ));
+
+                title_row.spawn((
+                    Text::new("ECS"),
+                    TextFont {
+                        font: game_assets.font.clone(),
+                        font_size: 12.0, // Smaller font size for superscript
+                        ..default()
+                    },
+                    TextColor(game_assets.palette.colors[2]),
+                    TextLayout::new_with_justify(JustifyText::Left),
+                ));
+            });
 
         parent.spawn((
             Text::new("FIRE TO PLAY"),
@@ -917,7 +963,7 @@ fn spawn_title(mut commands: Commands, game_assets: Res<GameAssets>) {
                 font_size: 20.0,
                 ..default()
             },
-            TextColor(Color::WHITE),
+            TextColor(game_assets.palette.colors[4]),
             TextLayout::new_with_justify(JustifyText::Center),
         ));
     });
@@ -946,11 +992,11 @@ fn player_death_to_title(
         next_state.set(GameState::Title);
     }
 }
+
 fn cleanup_game(mut commands: Commands, query: Query<Entity, With<GameEntity>>) {
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
-    //commands.remove_resource::<AlienManager>();
 }
 </title.rs>
 

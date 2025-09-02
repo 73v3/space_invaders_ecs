@@ -58,7 +58,7 @@ fn setup_score(mut commands: Commands, game_assets: Res<GameAssets>) {
                 font_size: 16.0,
                 ..default()
             },
-            TextColor(Color::WHITE),
+            TextColor(game_assets.palette.colors[3]),
             TextLayout::new_with_justify(JustifyText::Center),
             ScoreText,
         ));

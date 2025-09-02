@@ -67,7 +67,8 @@ fn spawn_aliens(
                 + (Vec3::Y * resolution.screen_dimensions.y * 0.5);
             commands.spawn((
                 Sprite {
-                    image: game_assets.alien_texture.clone(),
+                    image: game_assets.alien_texture_a.clone(),
+                    color: game_assets.palette.colors[2],
                     ..Default::default()
                 },
                 Transform::from_translation(position)
@@ -145,6 +146,7 @@ fn fire_alien_bullets(
                 commands.spawn((
                     Sprite {
                         image: game_assets.bullet_texture.clone(),
+                        color: game_assets.palette.colors[3],
                         ..Default::default()
                     },
                     Transform::from_translation(transform.translation)
@@ -153,7 +155,7 @@ fn fire_alien_bullets(
                         velocity: Vec2::new(0., BULLET_SPEED),
                     },
                     Collider {
-                        radius: 24.,
+                        radius: 16.,
                         source: ColliderSource::AlienBullet,
                     },
                     GameEntity,
