@@ -7,6 +7,7 @@ pub mod audio;
 pub mod collate_src;
 pub mod components;
 pub mod custom_window_plugin;
+pub mod debug;
 pub mod explosion;
 pub mod game;
 pub mod player;

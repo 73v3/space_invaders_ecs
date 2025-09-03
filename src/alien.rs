@@ -22,7 +22,6 @@ impl Plugin for AlienPlugin {
                     fire_alien_bullets,
                     animate_aliens,
                     check_all_aliens_dead,
-                    test_wave_clear,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -235,7 +234,6 @@ fn animate_aliens(
             game_assets.invader_move_2_sfx.clone()
         };
         audio::play_with_volume(&mut commands, sound, 0.5);
-        info!("Game Speed {:?}", game_speed.value)
     }
 }
 
@@ -249,18 +247,9 @@ fn check_all_aliens_dead(
         alien_manager.reset = true;
         clear_count.count += 1;
         game_speed.value = 1.0 + (clear_count.count as f32) / 2.0;
-        info!("Wave cleared! Game Speed {:?}", game_speed.value)
-    }
-}
-
-fn test_wave_clear(
-    mut commands: Commands,
-    alien_query: Query<Entity, With<Alien>>,
-    keys: Res<ButtonInput<KeyCode>>,
-) {
-    if keys.just_pressed(KeyCode::End) {
-        for entity in alien_query.iter() {
-            commands.entity(entity).despawn();
-        }
+        info!(
+            "Wave {} cleared! Game Speed {:?}",
+            clear_count.count, game_speed.value
+        )
     }
 }
