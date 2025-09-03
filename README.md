@@ -24,8 +24,6 @@ Critique: In stricter ECS, formation state should emerge from entity data (e.g.,
 
 Some systems are multi-responsibility: adjust_alien_formation handles shifting, direction reversal, speed increment, and full wave reset (despawn/respawn). This could be split (e.g., separate shift_formation and reset_wave systems) for better maintainability.
 
-Animation in animate_aliens syncs all aliens by checking one and applying to all—a pragmatic hack for synchronization, but it assumes uniform state. If aliens had individual animations, this would break.
-
 >> Collision Handling:
 
 Brute-force nested queries in update_collisions are simple but inefficient for growth. No spatial partitioning (e.g., quadtree via resource or component).
@@ -34,20 +32,11 @@ Critique: While fine here, it doesn't scale ECS-style—larger games need system
 
 Collision resolution is imperative: Inserts Dead, adjusts bullet counts, sends events in a loop. This mixes detection and response; separating into detection (gather pairs) and resolution systems would be more ECS-pure.
 
->> Component Granularity and Data Duplication:
-
-Alien stores original_position, but aliens move collectively—why per-entity? Could derive from a resource or formation component.
-
-Sprite and Transform are on every entity, which is fine, but color palettes are duplicated (e.g., game_assets.palette.colors[2] hardcoded). A PaletteColor component referencing an index could reduce repetition.
-
-Player has shoot_timer, but bullet limiting uses a separate PlayerBulletCount resource. This splits related state—could be a Player field or a query on active bullets.
-
 >> Event and State Management:
 
 Events are underused: Wave clearing relies on check_all_aliens_dead querying for empty aliens, setting a reset flag in AlienManager. An event (e.g., WaveCleared) would decouple this from the manager.
 
 Game speed increments are scattered (e.g., on alien kill, shift down, wave clear). A centralized speed-adjust system reading events would consolidate this.
-Testing hacks like test_wave_clear (despawn on End key) pollute production code—better as a debug plugin.
 
 ## License
 
@@ -55,10 +44,10 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Third-Party Assets
 
-## Fonts
+### Fonts
 This project uses the space_invaders.ttf font by chriswal1200, licensed under the SIL Open Font License, Version 1.1. See `assets/fonts/space_invaders/license.txt` for license details.
 
-## Sfx
+### Sfx
 
 Sound effects are not included in this repository due to unclear licensing. To run the game with sound, obtain the following files from a licensed source and place them in the assets/sfx folder.
 
@@ -70,7 +59,7 @@ or
 
 https://www.classicgaming.cc/classics/space-invaders/sounds (download sounds individually)
 
-## Palette
+### Palette
 
 The gilt-8 palette by tomicit0 is used for colors. Credit is provided as a courtesy.
 

@@ -29,6 +29,7 @@ pub struct GameAssets {
     pub alien_killed_sfx: Handle<AudioSource>,
     pub invader_move_1_sfx: Handle<AudioSource>,
     pub invader_move_2_sfx: Handle<AudioSource>,
+    pub player_explosion_sfx: Handle<AudioSource>,
     pub palette: Palette,
 }
 
@@ -63,6 +64,7 @@ fn load_assets(
         alien_killed_sfx: asset_server.load("sfx/invaderkilled.wav"),
         invader_move_1_sfx: asset_server.load("sfx/fastinvader1.wav"),
         invader_move_2_sfx: asset_server.load("sfx/fastinvader2.wav"),
+        player_explosion_sfx: asset_server.load("sfx/player_explosion.ogg"),
         palette,
     });
     next_state.set(GameState::Title);
