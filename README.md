@@ -8,7 +8,7 @@ A Space Invaders game built with Bevy 0.16 and ECS in Rust, created as an educat
 
 WARNING: This is my first Rust project, created after 7 days of learning Rust and Bevy. The code is not a model of best practices but serves as a learning resource for others interested in Bevy and ECS.
 
-This project was inspired by [Biped-Potato’s Bevy Space Invaders] (https://github.com/Biped-Potato/bevy_space_invaders), used as a starting point and significantly expanded.
+This project was inspired by [Biped-Potato’s Bevy Space Invaders](https://github.com/Biped-Potato/bevy_space_invaders), used as a starting point and significantly expanded.
 
 ## Code Orientation
 
