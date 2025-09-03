@@ -5,6 +5,7 @@ use crate::assets;
 use crate::audio;
 use crate::collate_src;
 use crate::components;
+use crate::explosion;
 use crate::player;
 use crate::projectile;
 use crate::random;
@@ -29,6 +30,7 @@ impl Plugin for GamePlugin {
             score::ScorePlugin,
             shields::ShieldsPlugin,
             audio::AudioPlugin,
+            explosion::ExplosionPlugin,
         ))
         .add_systems(Startup, setup_scene);
     }

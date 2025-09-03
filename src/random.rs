@@ -4,6 +4,7 @@ use bevy::prelude::*;
 // Import WyRand and the necessary query components from bevy_rand
 use bevy_rand::prelude::{EntropyPlugin, GlobalEntropy, WyRand};
 // Import the Rng trait to use methods like .gen()
+use crate::assets::GameAssets;
 use rand_core::RngCore;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -26,4 +27,11 @@ impl Plugin for RandomPlugin {
 
 pub fn random_float(rng: &mut GlobalEntropy<WyRand>) -> f32 {
     (rng.next_u32() as f32) / (u32::MAX as f32)
+}
+
+/// Returns a random color from the GameAssets palette
+pub fn random_colour(rng: &mut GlobalEntropy<WyRand>, game_assets: &Res<GameAssets>) -> Color {
+    let palette = &game_assets.palette;
+    let index = (random_float(rng) * palette.colors.len() as f32) as usize;
+    palette.colors[index]
 }

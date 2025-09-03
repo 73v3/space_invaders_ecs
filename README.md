@@ -20,6 +20,10 @@ This project uses the space_invaders.ttf font by chriswal1200, licensed under th
 ## Sfx
 https://ronjeffries.com/articles/020-invaders-30ff/i-37/ (see download zip for sfx files to be placed in assets/sfx folder)
 
+or 
+
+https://www.classicgaming.cc/classics/space-invaders/sounds
+
 ## Palette
 
 https://lospec.com/palette-list/gilt-8
