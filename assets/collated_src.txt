@@ -187,27 +187,40 @@ fn animate_aliens(
     game_speed: Res<GameSpeed>,
     mut commands: Commands,
 ) {
+    let mut should_play_sound = false;
+    let mut new_frame = false;
+
+    // Check if any alien needs to switch frames (all aliens animate synchronously)
+    if let Some((alien, _)) = alien_query.iter_mut().next() {
+        let animation_timer = alien.animation_timer + time.delta_secs() * game_speed.value;
+        if animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
+            should_play_sound = true;
+            new_frame = !alien.current_frame;
+        }
+    }
+
+    // Update all aliens' animation state and sprite
     for (mut alien, mut sprite) in alien_query.iter_mut() {
         alien.animation_timer += time.delta_secs() * game_speed.value;
         if alien.animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
             alien.animation_timer = 0.0;
-            alien.current_frame = !alien.current_frame;
-            if alien.current_frame {
-                sprite.image = game_assets.alien_texture_b.clone();
-                audio::play_with_volume(
-                    &mut commands,
-                    game_assets.invader_move_1_sfx.clone(),
-                    0.01,
-                );
+            alien.current_frame = new_frame;
+            sprite.image = if new_frame {
+                game_assets.alien_texture_b.clone()
             } else {
-                sprite.image = game_assets.alien_texture_a.clone();
-                audio::play_with_volume(
-                    &mut commands,
-                    game_assets.invader_move_2_sfx.clone(),
-                    0.01,
-                );
+                game_assets.alien_texture_a.clone()
             };
         }
+    }
+
+    // Play sound once if frame changed
+    if should_play_sound {
+        let sound = if new_frame {
+            game_assets.invader_move_1_sfx.clone()
+        } else {
+            game_assets.invader_move_2_sfx.clone()
+        };
+        audio::play_with_volume(&mut commands, sound, 0.5);
     }
 }
 </alien.rs>
@@ -497,6 +510,7 @@ fn main() {
 </main.rs>
 
 <player.rs>
+// player.rs
 use crate::assets::GameAssets;
 use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, Velocity};
@@ -524,11 +538,17 @@ struct Player {
 #[derive(Event)]
 pub struct PlayerDied;
 
+#[derive(Resource)]
+pub struct PlayerBulletCount {
+    pub count: u32,
+}
+
 fn setup_player(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     resolution: Res<resolution::Resolution>,
 ) {
+    commands.insert_resource(PlayerBulletCount { count: 0 });
     commands.spawn((
         Sprite {
             image: game_assets.player_texture.clone(),
@@ -541,7 +561,7 @@ fn setup_player(
             0.,
         )
         .with_scale(Vec3::splat(resolution.pixel_ratio)),
-        Player { shoot_timer: 0. },
+        Player { shoot_timer: 2. },
         Collider {
             radius: 9.,
             source: ColliderSource::Player,
@@ -552,7 +572,7 @@ fn setup_player(
 
 const SPEED: f32 = 200.;
 const BULLET_SPEED: f32 = 400.;
-const SHOOT_COOLDOWN: f32 = 0.5;
+const SHOOT_COOLDOWN: f32 = 0.25;
 
 fn update_player(
     mut commands: Commands,
@@ -561,6 +581,7 @@ fn update_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     resolution: Res<resolution::Resolution>,
+    mut bullet_count: ResMut<PlayerBulletCount>,
 ) {
     if let Ok((mut player, mut transform)) = player_query.single_mut() {
         let mut horizontal = 0.;
@@ -586,7 +607,12 @@ fn update_player(
 
         player.shoot_timer -= time.delta_secs();
 
-        if keys.pressed(KeyCode::Space) && player.shoot_timer <= 0. {
+        // we can shoot whenever if no bullets on screen
+        if bullet_count.count == 0 {
+            player.shoot_timer = 0.;
+        }
+
+        if keys.just_pressed(KeyCode::Space) && player.shoot_timer <= 0. && bullet_count.count < 2 {
             player.shoot_timer = SHOOT_COOLDOWN;
 
             // Play the shoot sound effect
@@ -609,6 +635,8 @@ fn update_player(
                 },
                 GameEntity,
             ));
+
+            bullet_count.count += 1;
         }
     }
 }
@@ -632,7 +660,7 @@ fn player_death_handler(
 use crate::assets::GameAssets;
 use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameSpeed, GameState, Velocity};
-use crate::player::PlayerDied;
+use crate::player::{PlayerBulletCount, PlayerDied};
 use crate::resolution;
 use crate::score::AlienKilled;
 use bevy::prelude::*;
@@ -660,11 +688,15 @@ fn update_collisions(
     resolution: Res<resolution::Resolution>,
     mut game_speed: ResMut<GameSpeed>,
     game_assets: Res<GameAssets>,
+    mut bullet_count: ResMut<PlayerBulletCount>,
 ) {
     for (projectile_entity, projectile_transform, projectile_collider) in projectile_query.iter() {
         // Check if projectile is out of bounds, either above or below screen y boundary
         if projectile_transform.translation.y.abs() > resolution.screen_dimensions.y * 0.5 {
             commands.entity(projectile_entity).insert(Dead);
+            if projectile_collider.source == ColliderSource::PlayerBullet {
+                bullet_count.count -= 1;
+            }
             continue;
         }
 
@@ -693,6 +725,9 @@ fn update_collisions(
                 < 0.5 * (projectile_collider.radius + collider_collider.radius)
             {
                 commands.entity(projectile_entity).insert(Dead);
+                if projectile_collider.source == ColliderSource::PlayerBullet {
+                    bullet_count.count -= 1;
+                }
                 if collider_collider.source == ColliderSource::Player {
                     player_died_events.write(PlayerDied);
                 } else {
@@ -896,7 +931,7 @@ fn spawn_shields(
     resolution: Res<Resolution>,
 ) {
     let unit_spacing = UNIT_PIXEL_SIZE * resolution.pixel_ratio;
-    let shield_radius = (UNIT_PIXEL_SIZE / 2.0) * resolution.pixel_ratio / 4.;
+    let shield_radius = (UNIT_PIXEL_SIZE / 2.0) * resolution.pixel_ratio / 2.;
     let shield_y = -resolution.screen_dimensions.y * 0.4;
     let shield_spacing_x = resolution.screen_dimensions.x / NUM_SHIELDS as f32;
 

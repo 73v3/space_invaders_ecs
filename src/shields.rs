@@ -33,7 +33,7 @@ fn spawn_shields(
     resolution: Res<Resolution>,
 ) {
     let unit_spacing = UNIT_PIXEL_SIZE * resolution.pixel_ratio;
-    let shield_radius = (UNIT_PIXEL_SIZE / 2.0) * resolution.pixel_ratio / 4.;
+    let shield_radius = (UNIT_PIXEL_SIZE / 2.0) * resolution.pixel_ratio / 2.;
     let shield_y = -resolution.screen_dimensions.y * 0.4;
     let shield_spacing_x = resolution.screen_dimensions.x / NUM_SHIELDS as f32;
 

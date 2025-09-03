@@ -1,3 +1,4 @@
+// player.rs
 use crate::assets::GameAssets;
 use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, Velocity};
@@ -25,11 +26,17 @@ struct Player {
 #[derive(Event)]
 pub struct PlayerDied;
 
+#[derive(Resource)]
+pub struct PlayerBulletCount {
+    pub count: u32,
+}
+
 fn setup_player(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     resolution: Res<resolution::Resolution>,
 ) {
+    commands.insert_resource(PlayerBulletCount { count: 0 });
     commands.spawn((
         Sprite {
             image: game_assets.player_texture.clone(),
@@ -42,7 +49,7 @@ fn setup_player(
             0.,
         )
         .with_scale(Vec3::splat(resolution.pixel_ratio)),
-        Player { shoot_timer: 0. },
+        Player { shoot_timer: 2. },
         Collider {
             radius: 9.,
             source: ColliderSource::Player,
@@ -53,7 +60,7 @@ fn setup_player(
 
 const SPEED: f32 = 200.;
 const BULLET_SPEED: f32 = 400.;
-const SHOOT_COOLDOWN: f32 = 0.5;
+const SHOOT_COOLDOWN: f32 = 0.25;
 
 fn update_player(
     mut commands: Commands,
@@ -62,6 +69,7 @@ fn update_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     resolution: Res<resolution::Resolution>,
+    mut bullet_count: ResMut<PlayerBulletCount>,
 ) {
     if let Ok((mut player, mut transform)) = player_query.single_mut() {
         let mut horizontal = 0.;
@@ -87,7 +95,12 @@ fn update_player(
 
         player.shoot_timer -= time.delta_secs();
 
-        if keys.pressed(KeyCode::Space) && player.shoot_timer <= 0. {
+        // we can shoot whenever if no bullets on screen
+        if bullet_count.count == 0 {
+            player.shoot_timer = 0.;
+        }
+
+        if keys.just_pressed(KeyCode::Space) && player.shoot_timer <= 0. && bullet_count.count < 2 {
             player.shoot_timer = SHOOT_COOLDOWN;
 
             // Play the shoot sound effect
@@ -110,6 +123,8 @@ fn update_player(
                 },
                 GameEntity,
             ));
+
+            bullet_count.count += 1;
         }
     }
 }

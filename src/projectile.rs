@@ -2,7 +2,7 @@
 use crate::assets::GameAssets;
 use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameSpeed, GameState, Velocity};
-use crate::player::PlayerDied;
+use crate::player::{PlayerBulletCount, PlayerDied};
 use crate::resolution;
 use crate::score::AlienKilled;
 use bevy::prelude::*;
@@ -30,11 +30,15 @@ fn update_collisions(
     resolution: Res<resolution::Resolution>,
     mut game_speed: ResMut<GameSpeed>,
     game_assets: Res<GameAssets>,
+    mut bullet_count: ResMut<PlayerBulletCount>,
 ) {
     for (projectile_entity, projectile_transform, projectile_collider) in projectile_query.iter() {
         // Check if projectile is out of bounds, either above or below screen y boundary
         if projectile_transform.translation.y.abs() > resolution.screen_dimensions.y * 0.5 {
             commands.entity(projectile_entity).insert(Dead);
+            if projectile_collider.source == ColliderSource::PlayerBullet {
+                bullet_count.count -= 1;
+            }
             continue;
         }
 
@@ -63,6 +67,9 @@ fn update_collisions(
                 < 0.5 * (projectile_collider.radius + collider_collider.radius)
             {
                 commands.entity(projectile_entity).insert(Dead);
+                if projectile_collider.source == ColliderSource::PlayerBullet {
+                    bullet_count.count -= 1;
+                }
                 if collider_collider.source == ColliderSource::Player {
                     player_died_events.write(PlayerDied);
                 } else {

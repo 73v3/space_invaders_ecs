@@ -186,26 +186,39 @@ fn animate_aliens(
     game_speed: Res<GameSpeed>,
     mut commands: Commands,
 ) {
+    let mut should_play_sound = false;
+    let mut new_frame = false;
+
+    // Check if any alien needs to switch frames (all aliens animate synchronously)
+    if let Some((alien, _)) = alien_query.iter_mut().next() {
+        let animation_timer = alien.animation_timer + time.delta_secs() * game_speed.value;
+        if animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
+            should_play_sound = true;
+            new_frame = !alien.current_frame;
+        }
+    }
+
+    // Update all aliens' animation state and sprite
     for (mut alien, mut sprite) in alien_query.iter_mut() {
         alien.animation_timer += time.delta_secs() * game_speed.value;
         if alien.animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
             alien.animation_timer = 0.0;
-            alien.current_frame = !alien.current_frame;
-            if alien.current_frame {
-                sprite.image = game_assets.alien_texture_b.clone();
-                audio::play_with_volume(
-                    &mut commands,
-                    game_assets.invader_move_1_sfx.clone(),
-                    0.01,
-                );
+            alien.current_frame = new_frame;
+            sprite.image = if new_frame {
+                game_assets.alien_texture_b.clone()
             } else {
-                sprite.image = game_assets.alien_texture_a.clone();
-                audio::play_with_volume(
-                    &mut commands,
-                    game_assets.invader_move_2_sfx.clone(),
-                    0.01,
-                );
+                game_assets.alien_texture_a.clone()
             };
         }
+    }
+
+    // Play sound once if frame changed
+    if should_play_sound {
+        let sound = if new_frame {
+            game_assets.invader_move_1_sfx.clone()
+        } else {
+            game_assets.invader_move_2_sfx.clone()
+        };
+        audio::play_with_volume(&mut commands, sound, 0.5);
     }
 }
