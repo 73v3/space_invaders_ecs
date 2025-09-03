@@ -1,7 +1,10 @@
 # Space Invaders ECS
 A Space Invaders game built with Bevy 0.16 and ECS in Rust, created as an educational exercise to demonstrate 2D game development with Bevy.
 
-![Screenshot of Space Invaders ECS](assets/screenshot.png)
+<div align="center">
+  <img src="assets/screenshot.png" alt="Screenshot of Space Invaders ECS" width="50%"/>
+  <p>Screenshot of the Space Invaders ECS game in action.</p>
+</div>
 
 WARNING: This is my first Rust project, created after 7 days of learning Rust and Bevy. The code is not a model of best practices but serves as a learning resource for others interested in Bevy and ECS.
 
