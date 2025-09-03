@@ -1,5 +1,5 @@
 use crate::assets::GameAssets;
-use crate::components::{GameEntity, GameSpeed, GameState};
+use crate::components::{ClearCount, GameEntity, GameSpeed, GameState};
 use crate::player::PlayerDied;
 use bevy::prelude::*;
 use bevy::state::app::AppExtStates;
@@ -92,11 +92,14 @@ fn despawn_title(mut commands: Commands, query: Query<Entity, With<TitleText>>) 
     }
 }
 
+/// Only runs if displaying title screen
 fn handle_title_input(
     mut next_state: ResMut<NextState<GameState>>,
     keys: Res<ButtonInput<KeyCode>>,
+    mut clear_count: ResMut<ClearCount>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
+        clear_count.count = 0; // Reset clear count on new game
         next_state.set(GameState::Playing);
     }
 }

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 // Import WyRand and the necessary query components from bevy_rand
 use bevy_rand::prelude::{EntropyPlugin, GlobalEntropy, WyRand};
-// Import the Rng trait to use methods like .gen()
+
 use crate::assets::GameAssets;
 use rand_core::RngCore;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -19,7 +19,7 @@ impl Plugin for RandomPlugin {
             .expect("Time went backwards")
             .as_nanos() as u64;
 
-        // CORRECTED: The `with_seed` function now expects a byte array.
+        // The `with_seed` function expects a byte array.
         // We convert the u64 seed to a little-endian byte array.
         app.add_plugins(EntropyPlugin::<WyRand>::with_seed(seed.to_le_bytes()));
     }

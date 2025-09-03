@@ -1,7 +1,7 @@
 use crate::assets::GameAssets;
 use crate::audio;
 use crate::components::{
-    Collider, ColliderSource, Dead, GameEntity, GameSpeed, GameState, Velocity,
+    ClearCount, Collider, ColliderSource, Dead, GameEntity, GameSpeed, GameState, Velocity,
 };
 use crate::random::random_float;
 use crate::resolution;
@@ -21,6 +21,8 @@ impl Plugin for AlienPlugin {
                     adjust_alien_formation,
                     fire_alien_bullets,
                     animate_aliens,
+                    check_all_aliens_dead,
+                    test_wave_clear,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -54,18 +56,11 @@ const FIRE_PROBABILITY: f32 = 0.001; // % chance per alien per check
 const ANIMATION_BASE_SPEED: f32 = 1.0; // Seconds per frame at game_speed = 1.0
 const GAME_SPEED_INCREMENT: f32 = 0.1; // Increment game speed when aliens shift down
 
-fn spawn_aliens(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-    resolution: Res<resolution::Resolution>,
+fn spawn_alien_grid(
+    commands: &mut Commands,
+    game_assets: &GameAssets,
+    resolution: &resolution::Resolution,
 ) {
-    commands.insert_resource(AlienManager {
-        reset: false,
-        dist_from_boundary: 0.,
-        shift_aliens_down: false,
-        direction: 1.,
-        fire_timer: 0.,
-    });
     for x in 0..WIDTH {
         for y in 0..HEIGHT {
             let position = Vec3::new(x as f32 * SPACING, y as f32 * (1.5 * SPACING), 0.)
@@ -95,6 +90,21 @@ fn spawn_aliens(
     }
 }
 
+fn spawn_aliens(
+    mut commands: Commands,
+    game_assets: Res<GameAssets>,
+    resolution: Res<resolution::Resolution>,
+) {
+    commands.insert_resource(AlienManager {
+        reset: false,
+        dist_from_boundary: 0.,
+        shift_aliens_down: false,
+        direction: 1.,
+        fire_timer: 0.,
+    });
+    spawn_alien_grid(&mut commands, &game_assets, &resolution);
+}
+
 pub fn advance_aliens_horizontally(
     mut alien_query: Query<&mut Transform, (With<Alien>, Without<Dead>)>,
     mut alien_manager: ResMut<AlienManager>,
@@ -118,9 +128,12 @@ pub fn advance_aliens_horizontally(
 }
 
 pub fn adjust_alien_formation(
+    mut commands: Commands,
     mut alien_query: Query<(Entity, &mut Alien, &mut Transform), Without<Dead>>,
     mut alien_manager: ResMut<AlienManager>,
     mut game_speed: ResMut<GameSpeed>,
+    game_assets: Res<GameAssets>,
+    resolution: Res<resolution::Resolution>,
 ) {
     if alien_manager.shift_aliens_down {
         alien_manager.shift_aliens_down = false;
@@ -135,10 +148,12 @@ pub fn adjust_alien_formation(
     if alien_manager.reset {
         alien_manager.reset = false;
         alien_manager.direction = 1.0;
-        game_speed.value = 1.0;
-        for (_entity, alien, mut transform) in alien_query.iter_mut() {
-            transform.translation = alien.original_position;
+        // Despawn all existing aliens
+        for (entity, _, _) in alien_query.iter_mut() {
+            commands.entity(entity).despawn();
         }
+        // Respawn a new wave of aliens
+        spawn_alien_grid(&mut commands, &game_assets, &resolution);
     }
 }
 
@@ -220,5 +235,32 @@ fn animate_aliens(
             game_assets.invader_move_2_sfx.clone()
         };
         audio::play_with_volume(&mut commands, sound, 0.5);
+        info!("Game Speed {:?}", game_speed.value)
+    }
+}
+
+fn check_all_aliens_dead(
+    alien_query: Query<Entity, (With<Alien>, Without<Dead>)>,
+    mut alien_manager: ResMut<AlienManager>,
+    mut game_speed: ResMut<GameSpeed>,
+    mut clear_count: ResMut<ClearCount>,
+) {
+    if alien_query.is_empty() {
+        alien_manager.reset = true;
+        clear_count.count += 1;
+        game_speed.value = 1.0 + (clear_count.count as f32) / 2.0;
+        info!("Wave cleared! Game Speed {:?}", game_speed.value)
+    }
+}
+
+fn test_wave_clear(
+    mut commands: Commands,
+    alien_query: Query<Entity, With<Alien>>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    if keys.just_pressed(KeyCode::End) {
+        for entity in alien_query.iter() {
+            commands.entity(entity).despawn();
+        }
     }
 }

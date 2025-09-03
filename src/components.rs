@@ -32,24 +32,33 @@ pub enum ColliderSource {
     Alien,
     AlienBullet,
     Shield,
-    None, // For entities that aren't projectiles, like the player or aliens themselves
+    None, // unhandled - ?remove?
 }
 
+// This value steadily increments as aliens are killed, advance down the screen or are cleared.
 #[derive(Resource)]
 pub struct GameSpeed {
     pub value: f32,
+}
+
+// Number of times in a game that all aliens have been killed, thus "clear" ing the screen
+#[derive(Resource)]
+pub struct ClearCount {
+    pub count: u32,
 }
 
 pub struct ComponentsPlugin;
 
 impl Plugin for ComponentsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GameSpeed { value: 1.0 }).add_systems(
-            Update,
-            (despawn_dead_entities, update_velocity)
-                .chain()
-                .run_if(in_state(GameState::Playing)),
-        );
+        app.insert_resource(GameSpeed { value: 1.0 })
+            .insert_resource(ClearCount { count: 0 })
+            .add_systems(
+                Update,
+                (despawn_dead_entities, update_velocity)
+                    .chain()
+                    .run_if(in_state(GameState::Playing)),
+            );
     }
 }
 
