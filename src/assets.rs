@@ -26,6 +26,8 @@ pub struct GameAssets {
     pub font: Handle<Font>,
     pub shoot_sfx: Handle<AudioSource>,
     pub alien_killed_sfx: Handle<AudioSource>,
+    pub invader_move_1_sfx: Handle<AudioSource>,
+    pub invader_move_2_sfx: Handle<AudioSource>,
     pub palette: Palette,
 }
 
@@ -57,6 +59,8 @@ fn load_assets(
         font: asset_server.load("fonts/space_invaders/space-invaders-full-version.ttf"),
         shoot_sfx: asset_server.load("sfx/shoot.wav"),
         alien_killed_sfx: asset_server.load("sfx/invaderkilled.wav"),
+        invader_move_1_sfx: asset_server.load("sfx/fastinvader1.wav"),
+        invader_move_2_sfx: asset_server.load("sfx/fastinvader2.wav"),
         palette,
     });
     next_state.set(GameState::Title);

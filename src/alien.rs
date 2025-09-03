@@ -1,4 +1,5 @@
 use crate::assets::GameAssets;
+use crate::audio;
 use crate::components::{
     Collider, ColliderSource, Dead, GameEntity, GameSpeed, GameState, Velocity,
 };
@@ -42,15 +43,16 @@ pub struct AlienManager {
     pub fire_timer: f32,
 }
 
-const WIDTH: i32 = 10;
-const HEIGHT: i32 = 5;
+const WIDTH: i32 = 16;
+const HEIGHT: i32 = 6;
 const SPACING: f32 = 24.;
-const SPEED: f32 = 100.0;
+const ALIEN_SPEED: f32 = 1.0;
 const ALIEN_SHIFT_AMOUNT: f32 = 12.;
 const BULLET_SPEED: f32 = -200.; // Negative for downward movement
-const FIRE_INTERVAL: f32 = 2.0; // Base interval between firing checks
-const FIRE_PROBABILITY: f32 = 0.05; // 5% chance per alien per check
-const ANIMATION_BASE_SPEED: f32 = 0.5; // Seconds per frame at game_speed = 1.0
+const FIRE_INTERVAL: f32 = 0.1; // Base interval between firing checks
+const FIRE_PROBABILITY: f32 = 0.001; // % chance per alien per check
+const ANIMATION_BASE_SPEED: f32 = 1.0; // Seconds per frame at game_speed = 1.0
+const GAME_SPEED_INCREMENT: f32 = 0.1; // Increment game speed when aliens shift down
 
 fn spawn_aliens(
     mut commands: Commands,
@@ -102,7 +104,7 @@ pub fn advance_aliens_horizontally(
 ) {
     for mut transform in alien_query.iter_mut() {
         transform.translation.x +=
-            time.delta_secs() * alien_manager.direction * SPEED * game_speed.value;
+            time.delta_secs() * alien_manager.direction * ALIEN_SPEED * (30.0 * game_speed.value);
         if transform.translation.x.abs() > resolution.screen_dimensions.x * 0.5 {
             alien_manager.shift_aliens_down = true;
             alien_manager.dist_from_boundary =
@@ -118,10 +120,12 @@ pub fn advance_aliens_horizontally(
 pub fn adjust_alien_formation(
     mut alien_query: Query<(Entity, &mut Alien, &mut Transform), Without<Dead>>,
     mut alien_manager: ResMut<AlienManager>,
+    mut game_speed: ResMut<GameSpeed>,
 ) {
     if alien_manager.shift_aliens_down {
         alien_manager.shift_aliens_down = false;
         alien_manager.direction *= -1.0;
+        game_speed.value += GAME_SPEED_INCREMENT;
         for (_entity, _alien, mut transform) in alien_query.iter_mut() {
             transform.translation.x += alien_manager.dist_from_boundary;
             transform.translation.y -= ALIEN_SHIFT_AMOUNT;
@@ -131,6 +135,7 @@ pub fn adjust_alien_formation(
     if alien_manager.reset {
         alien_manager.reset = false;
         alien_manager.direction = 1.0;
+        game_speed.value = 1.0;
         for (_entity, alien, mut transform) in alien_query.iter_mut() {
             transform.translation = alien.original_position;
         }
@@ -144,13 +149,14 @@ fn fire_alien_bullets(
     alien_query: Query<&Transform, (With<Alien>, Without<Dead>)>,
     resolution: Res<resolution::Resolution>,
     time: Res<Time>,
+    game_speed: Res<GameSpeed>,
     mut rng: GlobalEntropy<WyRand>,
 ) {
-    alien_manager.fire_timer -= time.delta_secs();
+    alien_manager.fire_timer -= time.delta_secs() * game_speed.value;
     if alien_manager.fire_timer <= 0. {
         alien_manager.fire_timer = FIRE_INTERVAL;
         for transform in alien_query.iter() {
-            if random_float(&mut rng) < FIRE_PROBABILITY {
+            if random_float(&mut rng) < FIRE_PROBABILITY * game_speed.value {
                 commands.spawn((
                     Sprite {
                         image: game_assets.bullet_texture.clone(),
@@ -178,16 +184,27 @@ fn animate_aliens(
     game_assets: Res<GameAssets>,
     time: Res<Time>,
     game_speed: Res<GameSpeed>,
+    mut commands: Commands,
 ) {
     for (mut alien, mut sprite) in alien_query.iter_mut() {
         alien.animation_timer += time.delta_secs() * game_speed.value;
         if alien.animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
             alien.animation_timer = 0.0;
             alien.current_frame = !alien.current_frame;
-            sprite.image = if alien.current_frame {
-                game_assets.alien_texture_b.clone()
+            if alien.current_frame {
+                sprite.image = game_assets.alien_texture_b.clone();
+                audio::play_with_volume(
+                    &mut commands,
+                    game_assets.invader_move_1_sfx.clone(),
+                    0.01,
+                );
             } else {
-                game_assets.alien_texture_a.clone()
+                sprite.image = game_assets.alien_texture_a.clone();
+                audio::play_with_volume(
+                    &mut commands,
+                    game_assets.invader_move_2_sfx.clone(),
+                    0.01,
+                );
             };
         }
     }

@@ -1,7 +1,7 @@
 // projectile.rs
 use crate::assets::GameAssets;
 use crate::audio;
-use crate::components::{Collider, ColliderSource, Dead, GameState, Velocity};
+use crate::components::{Collider, ColliderSource, Dead, GameSpeed, GameState, Velocity};
 use crate::player::PlayerDied;
 use crate::resolution;
 use crate::score::AlienKilled;
@@ -28,6 +28,7 @@ fn update_collisions(
         (With<Collider>, Without<Velocity>, Without<Dead>),
     >,
     resolution: Res<resolution::Resolution>,
+    mut game_speed: ResMut<GameSpeed>,
     game_assets: Res<GameAssets>,
 ) {
     for (projectile_entity, projectile_transform, projectile_collider) in projectile_query.iter() {
@@ -70,6 +71,7 @@ fn update_collisions(
                         && collider_collider.source == ColliderSource::Alien
                     {
                         alien_killed_events.write(AlienKilled);
+                        game_speed.value += 0.025; // game gets faster per alien killed
                         audio::play(&mut commands, game_assets.alien_killed_sfx.clone());
                     }
                 }

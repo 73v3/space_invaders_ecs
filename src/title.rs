@@ -1,5 +1,5 @@
 use crate::assets::GameAssets;
-use crate::components::{GameEntity, GameState};
+use crate::components::{GameEntity, GameSpeed, GameState};
 use crate::player::PlayerDied;
 use bevy::prelude::*;
 use bevy::state::app::AppExtStates;
@@ -104,9 +104,11 @@ fn handle_title_input(
 fn player_death_to_title(
     mut next_state: ResMut<NextState<GameState>>,
     mut events: EventReader<PlayerDied>,
+    mut game_speed: ResMut<GameSpeed>,
 ) {
     for _ in events.read() {
         next_state.set(GameState::Title);
+        game_speed.value = 1.0; // reset speed
     }
 }
 

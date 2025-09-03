@@ -22,9 +22,9 @@ impl Plugin for ShieldsPlugin {
 #[derive(Component)]
 pub struct ShieldUnit;
 
-const NUM_SHIELDS: usize = 4;
+const NUM_SHIELDS: usize = 5;
 const SHIELD_GRID_WIDTH: i32 = 5;
-const SHIELD_GRID_HEIGHT: i32 = 3;
+const SHIELD_GRID_HEIGHT: i32 = 4;
 const UNIT_PIXEL_SIZE: f32 = 8.0;
 
 fn spawn_shields(
@@ -45,6 +45,20 @@ fn spawn_shields(
                 shield_x + (gx as f32 - (SHIELD_GRID_WIDTH as f32 - 1.0) / 2.0) * unit_spacing;
 
             for gy in 0..SHIELD_GRID_HEIGHT {
+                // We crudely shape the shield by skipping element locations
+                // Skip top-left corner (gx=0, gy=SHIELD_GRID_HEIGHT-1)
+                if gx == 0 && gy == SHIELD_GRID_HEIGHT - 1 {
+                    continue;
+                }
+                // Skip top-right corner (gx=SHIELD_GRID_WIDTH-1, gy=SHIELD_GRID_HEIGHT-1)
+                if gx == SHIELD_GRID_WIDTH - 1 && gy == SHIELD_GRID_HEIGHT - 1 {
+                    continue;
+                }
+                // Skip middle three units in the bottom row (gy=0, gx=1 or gx=2 or gx=3)
+                if gy == 0 && (gx >= 1 && gx <= 3) {
+                    continue;
+                }
+
                 let unit_y =
                     shield_y + (gy as f32 - (SHIELD_GRID_HEIGHT as f32 - 1.0) / 2.0) * unit_spacing;
 
