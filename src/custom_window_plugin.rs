@@ -1,6 +1,7 @@
 // custom_window_plugin.rs -> assistant: leave this comment in place, it orients the AI
 use bevy::{prelude::*, window::PresentMode, window::WindowMode, window::WindowResolution};
 
+const GAME_TITLE: &str = "Space Invaders ECS";
 const BACKGROUND_COLOR: Color = Color::srgb(0.1, 0.1, 0.1);
 
 pub struct CustomWindowPlugin;
@@ -12,7 +13,7 @@ impl Plugin for CustomWindowPlugin {
                 DefaultPlugins
                     .set(bevy::window::WindowPlugin {
                         primary_window: Some(Window {
-                            title: "Custom Window Title".to_string(),
+                            title: GAME_TITLE.to_string(),
                             present_mode: PresentMode::AutoVsync,
                             mode: WindowMode::Windowed,
                             position: WindowPosition::Centered(MonitorSelection::Primary),

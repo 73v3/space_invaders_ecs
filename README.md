@@ -16,11 +16,15 @@ Copy [collated_src.txt](assets/collated_src.txt) into your favourite AI and disc
 
 ## Weaknesses
 
+Overall I'm not entirely happy with the project organisation. I've come from years of object-orientation, and moving to ECS, I'm still not sure where everything belongs.
+
 >> Collision Handling:
 
-Brute-force nested queries in update_collisions are simple but inefficient for growth. No spatial partitioning (e.g., quadtree via resource or component).
+Brute-force nested queries in update_collisions are simple but inefficient.
 
-Detection is proximity based rather than via bounding boxes, which has its accuracy limitations. Detection could potentially be centralised to its own collisions plugin.
+Detection is proximity based rather than via bounding boxes, which has its accuracy limitations.
+
+Detection could potentially be centralised to its own collisions plugin.
 
 >> Event and State Management:
 
