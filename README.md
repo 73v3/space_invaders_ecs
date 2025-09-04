@@ -16,21 +16,13 @@ Copy [collated_src.txt](assets/collated_src.txt) into your favourite AI and disc
 
 ## Weaknesses
 
->> Centralization in Resources and Systems:
-
-AlienManager resource acts like a "manager class," holding formation state (direction, shift flags, boundary distance). Systems like advance_aliens_horizontally derive state from entities but store it back in the resource. This violates pure ECS by introducing a singleton-like coordinator.
-
-Critique: In stricter ECS, formation state should emerge from entity data (e.g., query all aliens to compute min/max X for boundaries). The current approach works but reduces parallelism (systems chain on the resource) and makes debugging harder (state isn't localized to entities).
-
-Some systems are multi-responsibility: adjust_alien_formation handles shifting, direction reversal, speed increment, and full wave reset (despawn/respawn). This could be split (e.g., separate shift_formation and reset_wave systems) for better maintainability.
-
 >> Collision Handling:
 
 Brute-force nested queries in update_collisions are simple but inefficient for growth. No spatial partitioning (e.g., quadtree via resource or component).
 
 Critique: While fine here, it doesn't scale ECS-style—larger games need systems that batch collisions (e.g., via Bevy's rapier plugin). Also, it skips certain checks (e.g., player bullets vs. player) with if-guards, which could be query filters instead.
 
-Collision resolution is imperative: Inserts Dead, adjusts bullet counts, sends events in a loop. This mixes detection and response; separating into detection (gather pairs) and resolution systems would be more ECS-pure.
+Detection is proximity based rather than via bounding boxes, which has its accuracy limitations.
 
 >> Event and State Management:
 

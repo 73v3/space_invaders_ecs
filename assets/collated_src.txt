@@ -19,10 +19,10 @@ impl Plugin for AlienPlugin {
                 Update,
                 (
                     advance_aliens_horizontally,
-                    adjust_alien_formation,
-                    fire_alien_bullets,
+                    check_side_bounds,
+                    //fire_alien_bullets,
                     animate_aliens,
-                    check_all_aliens_dead,
+                    handle_wave_reset,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -36,17 +36,14 @@ pub struct Alien {
     pub current_frame: bool, // false for alien_a, true for alien_b
 }
 
-#[derive(Resource)]
-pub struct AlienManager {
-    pub direction: f32,
-    pub shift_aliens_down: bool,
-    pub dist_from_boundary: f32,
-    pub reset: bool,
-    pub fire_timer: f32,
-}
+#[derive(Component)]
+pub struct FormationDirection(pub f32);
 
-const WIDTH: i32 = 16;
-const HEIGHT: i32 = 6;
+#[derive(Resource)]
+pub struct AlienFireTimer(pub f32);
+
+const WIDTH: i32 = 12;
+const HEIGHT: i32 = 5;
 const SPACING: f32 = 24.;
 const ALIEN_SPEED: f32 = 1.0;
 const ALIEN_SHIFT_AMOUNT: f32 = 12.;
@@ -66,7 +63,7 @@ fn spawn_alien_grid(
             let position = Vec3::new(x as f32 * SPACING, y as f32 * (1.5 * SPACING), 0.)
                 - (Vec3::X * WIDTH as f32 * SPACING * 0.5)
                 - (Vec3::Y * HEIGHT as f32 * (3.5 * SPACING) * 0.5)
-                + (Vec3::Y * resolution.screen_dimensions.y * 0.5);
+                + (Vec3::Y * resolution.screen_dimensions.y * 0.4);
             commands.spawn((
                 Sprite {
                     image: game_assets.alien_texture_a.clone(),
@@ -84,75 +81,123 @@ fn spawn_alien_grid(
                     radius: 16.,
                     source: ColliderSource::Alien,
                 },
+                FormationDirection(1.0),
                 GameEntity,
             ));
         }
     }
 }
 
+// called at the start of each new game
+// spawns a grid of aliens
 fn spawn_aliens(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     resolution: Res<resolution::Resolution>,
 ) {
-    commands.insert_resource(AlienManager {
-        reset: false,
-        dist_from_boundary: 0.,
-        shift_aliens_down: false,
-        direction: 1.,
-        fire_timer: 0.,
-    });
+    commands.insert_resource(AlienFireTimer(0.));
     spawn_alien_grid(&mut commands, &game_assets, &resolution);
 }
 
 pub fn advance_aliens_horizontally(
-    mut alien_query: Query<&mut Transform, (With<Alien>, Without<Dead>)>,
-    mut alien_manager: ResMut<AlienManager>,
-    resolution: Res<resolution::Resolution>,
+    mut alien_query: Query<(&mut Transform, &FormationDirection), (With<Alien>, Without<Dead>)>,
     time: Res<Time>,
     game_speed: Res<GameSpeed>,
 ) {
-    for mut transform in alien_query.iter_mut() {
-        transform.translation.x +=
-            time.delta_secs() * alien_manager.direction * ALIEN_SPEED * (30.0 * game_speed.value);
-        if transform.translation.x.abs() > resolution.screen_dimensions.x * 0.5 {
-            alien_manager.shift_aliens_down = true;
-            alien_manager.dist_from_boundary =
-                resolution.screen_dimensions.x * alien_manager.direction * 0.5
-                    - transform.translation.x;
-        }
-        if transform.translation.y < -resolution.screen_dimensions.y * 0.5 {
-            alien_manager.reset = true;
+    if let Some(dir) = alien_query.iter().next().map(|(_, d)| d.0) {
+        for (mut transform, _) in alien_query.iter_mut() {
+            transform.translation.x +=
+                time.delta_secs() * dir * ALIEN_SPEED * (30.0 * game_speed.value);
         }
     }
 }
 
-pub fn adjust_alien_formation(
+// if any aliens hits the side border, drop all aliens down a row, increase speed and reverse their direction
+pub fn check_side_bounds(
+    mut alien_query: Query<(&mut Transform, &mut FormationDirection), (With<Alien>, Without<Dead>)>,
+    mut game_speed: ResMut<GameSpeed>,
+    resolution: Res<resolution::Resolution>,
+) {
+    if alien_query.is_empty() {
+        return;
+    }
+
+    // The iter().next() method fetches the first alien entity element, and unwrap() grabs its values.
+    // The tuple's second element (.1) is the FormationDirection component, and .0 extracts its inner f32 value, representing the direction (1.0 for right, -1.0 for left).
+    let dir = alien_query.iter().next().unwrap().1 .0;
+
+    // find min and max x positions of the aliens
+    let (mut min_x, mut max_x) = (f32::MAX, f32::MIN);
+    for (transform, _) in alien_query.iter() {
+        let x = transform.translation.x;
+        min_x = min_x.min(x);
+        max_x = max_x.max(x);
+    }
+
+    // grab our edge and bound values from screen dimensions and alien min/max x positions
+    let left_bound = -resolution.screen_dimensions.x * 0.5 * 0.95;
+    let right_bound = resolution.screen_dimensions.x * 0.5 * 0.95;
+
+    let (edge, bound) = if dir > 0. {
+        (max_x, right_bound)
+    } else {
+        (min_x, left_bound)
+    };
+
+    // if an alien has stepped over an edge
+    if (edge - bound) * dir > 0. {
+        let overstep = edge - bound;
+        let new_dir = -dir;
+        game_speed.value += GAME_SPEED_INCREMENT;
+
+        // drop a row and flip movement direction of all aliens
+        for (mut transform, mut formation_dir) in alien_query.iter_mut() {
+            transform.translation.x -= overstep;
+            transform.translation.y -= ALIEN_SHIFT_AMOUNT;
+            formation_dir.0 = new_dir;
+        }
+    }
+}
+
+fn handle_wave_reset(
     mut commands: Commands,
-    mut alien_query: Query<(Entity, &mut Alien, &mut Transform), Without<Dead>>,
-    mut alien_manager: ResMut<AlienManager>,
+    alien_query: Query<(Entity, &Transform), (With<Alien>, Without<Dead>)>,
+    mut clear_count: ResMut<ClearCount>,
     mut game_speed: ResMut<GameSpeed>,
     game_assets: Res<GameAssets>,
     resolution: Res<resolution::Resolution>,
 ) {
-    if alien_manager.shift_aliens_down {
-        alien_manager.shift_aliens_down = false;
-        alien_manager.direction *= -1.0;
-        game_speed.value += GAME_SPEED_INCREMENT;
-        for (_entity, _alien, mut transform) in alien_query.iter_mut() {
-            transform.translation.x += alien_manager.dist_from_boundary;
-            transform.translation.y -= ALIEN_SHIFT_AMOUNT;
-        }
-    }
+    let is_empty = alien_query.is_empty();
 
-    if alien_manager.reset {
-        alien_manager.reset = false;
-        alien_manager.direction = 1.0;
-        // Despawn all existing aliens
-        for (entity, _, _) in alien_query.iter_mut() {
-            commands.entity(entity).despawn();
+    // find the smallest y-coordinate among all non-dead aliens, representing the lowest point of the alien formation
+    let min_y = if is_empty {
+        f32::MAX
+    } else {
+        alien_query
+            .iter()
+            .map(|(_, t)| t.translation.y) // Transforms each tuple into the y-coordinate (f32) of the alien’s Transform
+            .fold(f32::MAX, f32::min) // Reduces the iterator of y-coordinates to a single value by finding the minimum.
+    };
+
+    // has_landed = aliens have hit bottom of screen
+    let has_landed = !is_empty && min_y < -resolution.screen_dimensions.y * 0.5;
+
+    if has_landed || is_empty {
+        if has_landed {
+            for (entity, _) in alien_query.iter() {
+                commands.entity(entity).despawn();
+            }
         }
-        // Respawn a new wave of aliens
+
+        if is_empty {
+            clear_count.count += 1;
+            game_speed.value = 1.0 + (clear_count.count as f32) / 2.0;
+            info!(
+                "Wave {} cleared! Game Speed {:?}",
+                clear_count.count, game_speed.value
+            )
+        }
+
         spawn_alien_grid(&mut commands, &game_assets, &resolution);
     }
 }
@@ -160,16 +205,16 @@ pub fn adjust_alien_formation(
 fn fire_alien_bullets(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    mut alien_manager: ResMut<AlienManager>,
+    mut alien_fire_timer: ResMut<AlienFireTimer>,
     alien_query: Query<&Transform, (With<Alien>, Without<Dead>)>,
     resolution: Res<resolution::Resolution>,
     time: Res<Time>,
     game_speed: Res<GameSpeed>,
     mut rng: GlobalEntropy<WyRand>,
 ) {
-    alien_manager.fire_timer -= time.delta_secs() * game_speed.value;
-    if alien_manager.fire_timer <= 0. {
-        alien_manager.fire_timer = FIRE_INTERVAL;
+    alien_fire_timer.0 -= time.delta_secs() * game_speed.value;
+    if alien_fire_timer.0 <= 0. {
+        alien_fire_timer.0 = FIRE_INTERVAL;
         for transform in alien_query.iter() {
             if random_float(&mut rng) < FIRE_PROBABILITY * game_speed.value {
                 commands.spawn((
@@ -194,6 +239,8 @@ fn fire_alien_bullets(
     }
 }
 
+const MAX_ANIMATION_SPEED: f32 = 4.0;
+
 fn animate_aliens(
     mut alien_query: Query<(&mut Alien, &mut Sprite), Without<Dead>>,
     game_assets: Res<GameAssets>,
@@ -203,11 +250,12 @@ fn animate_aliens(
 ) {
     let mut should_play_sound = false;
     let mut new_frame = false;
+    let anim_speed = f32::min(MAX_ANIMATION_SPEED, game_speed.value); // sanity check on max animation speed
 
     // Check if any alien needs to switch frames (all aliens animate synchronously)
     if let Some((alien, _)) = alien_query.iter_mut().next() {
-        let animation_timer = alien.animation_timer + time.delta_secs() * game_speed.value;
-        if animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
+        let animation_timer = alien.animation_timer + time.delta_secs() * anim_speed;
+        if animation_timer >= ANIMATION_BASE_SPEED / anim_speed {
             should_play_sound = true;
             new_frame = !alien.current_frame;
         }
@@ -215,8 +263,8 @@ fn animate_aliens(
 
     // Update all aliens' animation state and sprite
     for (mut alien, mut sprite) in alien_query.iter_mut() {
-        alien.animation_timer += time.delta_secs() * game_speed.value;
-        if alien.animation_timer >= ANIMATION_BASE_SPEED / game_speed.value {
+        alien.animation_timer += time.delta_secs() * anim_speed;
+        if alien.animation_timer >= ANIMATION_BASE_SPEED / anim_speed {
             alien.animation_timer = 0.0;
             alien.current_frame = new_frame;
             sprite.image = if new_frame {
@@ -235,23 +283,6 @@ fn animate_aliens(
             game_assets.invader_move_2_sfx.clone()
         };
         audio::play_with_volume(&mut commands, sound, 0.5);
-    }
-}
-
-fn check_all_aliens_dead(
-    alien_query: Query<Entity, (With<Alien>, Without<Dead>)>,
-    mut alien_manager: ResMut<AlienManager>,
-    mut game_speed: ResMut<GameSpeed>,
-    mut clear_count: ResMut<ClearCount>,
-) {
-    if alien_query.is_empty() {
-        alien_manager.reset = true;
-        clear_count.count += 1;
-        game_speed.value = 1.0 + (clear_count.count as f32) / 2.0;
-        info!(
-            "Wave {} cleared! Game Speed {:?}",
-            clear_count.count, game_speed.value
-        )
     }
 }
 </alien.rs>
@@ -283,6 +314,7 @@ pub struct GameAssets {
     pub bullet_texture: Handle<Image>,
     pub shield_texture: Handle<Image>,
     pub explosion_texture: Handle<Image>,
+    pub bright_explosion_texture: Handle<Image>,
     pub font: Handle<Font>,
     pub shoot_sfx: Handle<AudioSource>,
     pub alien_killed_sfx: Handle<AudioSource>,
@@ -318,6 +350,7 @@ fn load_assets(
         bullet_texture: asset_server.load("bullet.png"),
         shield_texture: asset_server.load("shield.png"),
         explosion_texture: asset_server.load("explosion.png"),
+        bright_explosion_texture: asset_server.load("bright_explosion.png"),
         font: asset_server.load("fonts/space_invaders/space-invaders-full-version.ttf"),
         shoot_sfx: asset_server.load("sfx/shoot.wav"),
         alien_killed_sfx: asset_server.load("sfx/invaderkilled.wav"),
@@ -557,6 +590,7 @@ pub struct PlayerExplosion;
 
 const EXPLOSION_LIFETIME: f32 = 0.375;
 
+// spawns an explosion at the position of any alien that has just died
 fn spawn_alien_explosions(
     mut commands: Commands,
     dead_aliens: Query<&Transform, (With<Alien>, Added<Dead>)>,
@@ -567,7 +601,7 @@ fn spawn_alien_explosions(
     for transform in dead_aliens.iter() {
         commands.spawn((
             Sprite {
-                image: game_assets.explosion_texture.clone(),
+                image: game_assets.bright_explosion_texture.clone(),
                 color: random_colour(&mut rng, &game_assets),
                 ..Default::default()
             },
@@ -581,6 +615,8 @@ fn spawn_alien_explosions(
 
 const NUM_PLAYER_EXPLOSIONS: i32 = 16;
 
+// hides the player ship
+// and spawns multiple explosions in its place
 fn spawn_player_explosions(
     mut commands: Commands,
     mut player_died_events: EventReader<PlayerDied>,
@@ -619,6 +655,7 @@ fn spawn_player_explosions(
     }
 }
 
+// fades out explosions over time, despawning when done
 fn update_explosions(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Explosion, &mut Sprite)>,
@@ -639,6 +676,8 @@ fn update_explosions(
     }
 }
 
+// checks if the player is dead and player explosions have finished,
+// in which case, return to title screen
 fn check_player_explosions(
     player_explosion_query: Query<Entity, With<PlayerExplosion>>,
     player_query: Query<&Player, With<Dead>>,
@@ -1111,7 +1150,6 @@ impl Plugin for ShieldsPlugin {
                 Update,
                 check_alien_shield_collisions
                     .after(crate::alien::advance_aliens_horizontally)
-                    .after(crate::alien::adjust_alien_formation)
                     .run_if(in_state(GameState::Playing)),
             );
     }

@@ -13,7 +13,6 @@ impl Plugin for ShieldsPlugin {
                 Update,
                 check_alien_shield_collisions
                     .after(crate::alien::advance_aliens_horizontally)
-                    .after(crate::alien::adjust_alien_formation)
                     .run_if(in_state(GameState::Playing)),
             );
     }

@@ -37,6 +37,7 @@ pub struct PlayerExplosion;
 
 const EXPLOSION_LIFETIME: f32 = 0.375;
 
+// spawns an explosion at the position of any alien that has just died
 fn spawn_alien_explosions(
     mut commands: Commands,
     dead_aliens: Query<&Transform, (With<Alien>, Added<Dead>)>,
@@ -47,7 +48,7 @@ fn spawn_alien_explosions(
     for transform in dead_aliens.iter() {
         commands.spawn((
             Sprite {
-                image: game_assets.explosion_texture.clone(),
+                image: game_assets.bright_explosion_texture.clone(),
                 color: random_colour(&mut rng, &game_assets),
                 ..Default::default()
             },
@@ -61,6 +62,8 @@ fn spawn_alien_explosions(
 
 const NUM_PLAYER_EXPLOSIONS: i32 = 16;
 
+// hides the player ship
+// and spawns multiple explosions in its place
 fn spawn_player_explosions(
     mut commands: Commands,
     mut player_died_events: EventReader<PlayerDied>,
@@ -99,6 +102,7 @@ fn spawn_player_explosions(
     }
 }
 
+// fades out explosions over time, despawning when done
 fn update_explosions(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Explosion, &mut Sprite)>,
@@ -119,6 +123,8 @@ fn update_explosions(
     }
 }
 
+// checks if the player is dead and player explosions have finished,
+// in which case, return to title screen
 fn check_player_explosions(
     player_explosion_query: Query<Entity, With<PlayerExplosion>>,
     player_query: Query<&Player, With<Dead>>,
