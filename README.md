@@ -73,7 +73,7 @@ If you plan to use this project beyond personal learning, replace all third-part
 
 ## Installation
 
-- Ensure [Rust]("https://www.rust-lang.org/learn/get-started") and [Bevy 0.16]("https://bevy.org/learn/quick-start/getting-started/") dependencies are installed.
+- Ensure [Rust](https://www.rust-lang.org/learn/get-started) and [Bevy 0.16](https://bevy.org/learn/quick-start/getting-started) dependencies are installed.
 - Clone this repository.
 - Place sound effect files in assets/sfx or use alternatives.
 - Run the game with cargo run.
