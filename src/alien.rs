@@ -19,7 +19,7 @@ impl Plugin for AlienPlugin {
                 (
                     advance_aliens_horizontally,
                     check_side_bounds,
-                    //fire_alien_bullets,
+                    fire_alien_bullets,
                     animate_aliens,
                     handle_wave_reset,
                 )
@@ -103,6 +103,13 @@ pub fn advance_aliens_horizontally(
     time: Res<Time>,
     game_speed: Res<GameSpeed>,
 ) {
+    // Grab direction from the alien entity.
+    // Explanation:
+    //      The map method transforms the Option returned by next().
+    //      If next() returns Some((transform, formation_direction)), the closure |(_, d)| d.0 is applied:
+    //      The closure uses pattern matching to destructure the tuple (transform, formation_direction).
+    //      The underscore (_) ignores the Transform component (since we only care about the direction),
+    //      and d binds to the FormationDirection reference.
     if let Some(dir) = alien_query.iter().next().map(|(_, d)| d.0) {
         for (mut transform, _) in alien_query.iter_mut() {
             transform.translation.x +=
@@ -182,6 +189,7 @@ fn handle_wave_reset(
     let has_landed = !is_empty && min_y < -resolution.screen_dimensions.y * 0.5;
 
     if has_landed || is_empty {
+        // In practice, the aliens should hit the player before they hit the bottom of the screen, resulting in game over
         if has_landed {
             for (entity, _) in alien_query.iter() {
                 commands.entity(entity).despawn();

@@ -1,6 +1,7 @@
 use crate::alien::Alien;
 use crate::assets::GameAssets;
-use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState};
+use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, PlayerDied};
+use crate::player::Player;
 use crate::resolution::Resolution;
 use bevy::prelude::*;
 
@@ -11,7 +12,7 @@ impl Plugin for ShieldsPlugin {
         app.add_systems(OnEnter(GameState::Playing), spawn_shields)
             .add_systems(
                 Update,
-                check_alien_shield_collisions
+                check_alien_shield_player_collisions
                     .after(crate::alien::advance_aliens_horizontally)
                     .run_if(in_state(GameState::Playing)),
             );
@@ -81,16 +82,28 @@ fn spawn_shields(
     }
 }
 
-fn check_alien_shield_collisions(
+fn check_alien_shield_player_collisions(
     mut commands: Commands,
     alien_query: Query<(Entity, &Transform, &Collider), (With<Alien>, Without<Dead>)>,
     shield_query: Query<(Entity, &Transform, &Collider), (With<ShieldUnit>, Without<Dead>)>,
+    player_query: Query<(Entity, &Transform, &Collider), (With<Player>, Without<Dead>)>,
+    mut player_died_events: EventWriter<PlayerDied>,
 ) {
     for (_alien_entity, alien_transform, alien_collider) in alien_query.iter() {
+        // Check collisions with shields
         for (shield_entity, shield_transform, shield_collider) in shield_query.iter() {
             let distance = (alien_transform.translation - shield_transform.translation).length();
             if distance < alien_collider.radius + shield_collider.radius {
                 commands.entity(shield_entity).insert(Dead);
+            }
+        }
+
+        // Check collisions with player. This code arguably belongs elsewhere.
+        for (_player_entity, player_transform, player_collider) in player_query.iter() {
+            let distance = (alien_transform.translation - player_transform.translation).length();
+            if distance < alien_collider.radius + player_collider.radius {
+                player_died_events.write(PlayerDied);
+                // No need to mark the player as Dead here, as the PlayerDied event handler in explosion.rs will handle it
             }
         }
     }
