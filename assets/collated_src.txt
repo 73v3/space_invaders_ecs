@@ -67,7 +67,7 @@ fn spawn_alien_grid(
             commands.spawn((
                 Sprite {
                     image: game_assets.alien_texture_a.clone(),
-                    color: game_assets.palette.colors[2].with_alpha(1.),
+                    color: game_assets.palette.colors[2],
                     ..Default::default()
                 },
                 Transform::from_translation(position)

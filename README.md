@@ -12,9 +12,9 @@ This project was inspired by [Biped-Potato’s Bevy Space Invaders](https://gith
 
 ## Code Orientation
 
-Copy [collated_src.txt](assets/collated_src.txt) into your favourite AI and discuss the code with it. For example, Grok identified the following weaknesses in the ECS design:
+Copy [collated_src.txt](assets/collated_src.txt) into your favourite AI and discuss the code with it.
 
-## Weaknesses
+## Thoughts/Improvements
 
 Overall I'm not entirely happy with the project organisation. I've come from years of object-orientation, and moving to ECS, I'm still not sure where everything belongs.
 
