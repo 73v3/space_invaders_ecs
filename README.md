@@ -20,13 +20,11 @@ Copy [collated_src.txt](assets/collated_src.txt) into your favourite AI and disc
 
 Brute-force nested queries in update_collisions are simple but inefficient for growth. No spatial partitioning (e.g., quadtree via resource or component).
 
-Critique: While fine here, it doesn't scale ECS-style—larger games need systems that batch collisions (e.g., via Bevy's rapier plugin). Also, it skips certain checks (e.g., player bullets vs. player) with if-guards, which could be query filters instead.
-
-Detection is proximity based rather than via bounding boxes, which has its accuracy limitations.
+Detection is proximity based rather than via bounding boxes, which has its accuracy limitations. Detection could potentially be centralised to its own collisions plugin.
 
 >> Event and State Management:
 
-Events are underused: Wave clearing relies on check_all_aliens_dead querying for empty aliens, setting a reset flag in AlienManager. An event (e.g., WaveCleared) would decouple this from the manager.
+Events are underused.
 
 Game speed increments are scattered (e.g., on alien kill, shift down, wave clear). A centralized speed-adjust system reading events would consolidate this.
 
