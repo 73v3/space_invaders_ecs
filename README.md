@@ -61,19 +61,19 @@ https://www.classicgaming.cc/classics/space-invaders/sounds (download sounds ind
 
 ### Palette
 
-The gilt-8 palette by tomicit0 is used for colors. Credit is provided as a courtesy.
+The gilt-8 palette by tomicit0 is used for colors.
 
 https://lospec.com/palette-list/gilt-8
 
 ## Disclaimer
 
-This project is for educational purposes only. The code and included assets (e.g., font) are not intended for commercial use or public distribution outside of learning environments. Users must ensure compliance with the licenses of all third-party assets (font and sound effects) before using or distributing this project. The creator is not responsible for any misuse of the project or its assets.
+This project is for educational purposes only. The code and included assets are not intended for commercial use or public distribution outside of learning environments. Users must ensure compliance with the licenses of all third-party assets before using or distributing this project. The creator is not responsible for any misuse of the project or its assets.
 
 If you plan to use this project beyond personal learning, replace all third-party assets with properly licensed alternatives and ensure compliance with the MIT License for the code.
 
 ## Installation
 
-- Ensure Rust and Bevy 0.16 dependencies are installed.
+- Ensure [Rust]("https://www.rust-lang.org/learn/get-started") and [Bevy 0.16]("https://bevy.org/learn/quick-start/getting-started/") dependencies are installed.
 - Clone this repository.
 - Place sound effect files in assets/sfx or use alternatives.
 - Run the game with cargo run.
