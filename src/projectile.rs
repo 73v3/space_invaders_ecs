@@ -1,8 +1,9 @@
-// projectile.rs
 use crate::assets::GameAssets;
 use crate::audio;
-use crate::components::{Collider, ColliderSource, Dead, GameSpeed, GameState, Velocity};
-use crate::player::{PlayerBulletCount, PlayerDied};
+use crate::components::{
+    Collider, ColliderSource, Dead, GameSpeed, GameState, PlayerDied, Velocity,
+};
+use crate::player::PlayerBulletCount;
 use crate::resolution;
 use crate::score::AlienKilled;
 use bevy::prelude::*;
@@ -33,7 +34,6 @@ fn update_collisions(
     mut bullet_count: ResMut<PlayerBulletCount>,
 ) {
     for (projectile_entity, projectile_transform, projectile_collider) in projectile_query.iter() {
-        // Check if projectile is out of bounds, either above or below screen y boundary
         if projectile_transform.translation.y.abs() > resolution.screen_dimensions.y * 0.5 {
             commands.entity(projectile_entity).insert(Dead);
             if projectile_collider.source == ColliderSource::PlayerBullet {
@@ -43,13 +43,11 @@ fn update_collisions(
         }
 
         for (collider_entity, collider_transform, collider_collider) in collider_query.iter() {
-            // player bullets cannot hit player
             if projectile_collider.source == ColliderSource::PlayerBullet
                 && collider_collider.source == ColliderSource::Player
             {
                 continue;
             }
-            // alien bullets cannot hit aliens
             if projectile_collider.source == ColliderSource::AlienBullet
                 && collider_collider.source == ColliderSource::Alien
             {
@@ -78,7 +76,7 @@ fn update_collisions(
                         && collider_collider.source == ColliderSource::Alien
                     {
                         alien_killed_events.write(AlienKilled);
-                        game_speed.value += 0.025; // game gets faster per alien killed
+                        game_speed.value += 0.025;
                         audio::play(&mut commands, game_assets.alien_killed_sfx.clone());
                     }
                 }

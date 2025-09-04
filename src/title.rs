@@ -1,6 +1,5 @@
 use crate::assets::GameAssets;
-use crate::components::{ClearCount, GameEntity, GameSpeed, GameState};
-use crate::player::PlayerDied;
+use crate::components::{ClearCount, GameEntity, GameState};
 use bevy::prelude::*;
 use bevy::state::app::AppExtStates;
 
@@ -14,10 +13,6 @@ impl Plugin for TitlePlugin {
             .add_systems(
                 Update,
                 handle_title_input.run_if(in_state(GameState::Title)),
-            )
-            .add_systems(
-                Update,
-                player_death_to_title.run_if(in_state(GameState::Playing)),
             );
     }
 }
@@ -101,17 +96,6 @@ fn handle_title_input(
     if keys.just_pressed(KeyCode::Space) {
         clear_count.count = 0; // Reset clear count on new game
         next_state.set(GameState::Playing);
-    }
-}
-
-fn player_death_to_title(
-    mut next_state: ResMut<NextState<GameState>>,
-    mut events: EventReader<PlayerDied>,
-    mut game_speed: ResMut<GameSpeed>,
-) {
-    for _ in events.read() {
-        next_state.set(GameState::Title);
-        game_speed.value = 1.0; // reset speed
     }
 }
 

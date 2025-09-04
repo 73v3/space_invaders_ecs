@@ -1,3 +1,4 @@
+use crate::player::Player;
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Hash, States, Debug)]
@@ -32,16 +33,17 @@ pub enum ColliderSource {
     Alien,
     AlienBullet,
     Shield,
-    None, // unhandled - ?remove?
+    None,
 }
 
-// This value steadily increments as aliens are killed, advance down the screen or are cleared.
+#[derive(Event)]
+pub struct PlayerDied;
+
 #[derive(Resource)]
 pub struct GameSpeed {
     pub value: f32,
 }
 
-// Number of times in a game that all aliens have been killed, thus "clear" ing the screen
 #[derive(Resource)]
 pub struct ClearCount {
     pub count: u32,
@@ -62,7 +64,10 @@ impl Plugin for ComponentsPlugin {
     }
 }
 
-pub fn despawn_dead_entities(mut commands: Commands, dead_query: Query<Entity, With<Dead>>) {
+pub fn despawn_dead_entities(
+    mut commands: Commands,
+    dead_query: Query<Entity, (With<Dead>, Without<Player>)>,
+) {
     for entity in dead_query.iter() {
         commands.entity(entity).despawn();
     }

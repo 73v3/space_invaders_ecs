@@ -361,6 +361,7 @@ pub fn play_with_volume(commands: &mut Commands, audio: Handle<AudioSource>, vol
 </audio.rs>
 
 <components.rs>
+use crate::player::Player;
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Hash, States, Debug)]
@@ -395,16 +396,17 @@ pub enum ColliderSource {
     Alien,
     AlienBullet,
     Shield,
-    None, // unhandled - ?remove?
+    None,
 }
 
-// This value steadily increments as aliens are killed, advance down the screen or are cleared.
+#[derive(Event)]
+pub struct PlayerDied;
+
 #[derive(Resource)]
 pub struct GameSpeed {
     pub value: f32,
 }
 
-// Number of times in a game that all aliens have been killed, thus "clear" ing the screen
 #[derive(Resource)]
 pub struct ClearCount {
     pub count: u32,
@@ -425,7 +427,10 @@ impl Plugin for ComponentsPlugin {
     }
 }
 
-pub fn despawn_dead_entities(mut commands: Commands, dead_query: Query<Entity, With<Dead>>) {
+pub fn despawn_dead_entities(
+    mut commands: Commands,
+    dead_query: Query<Entity, (With<Dead>, Without<Player>)>,
+) {
     for entity in dead_query.iter() {
         commands.entity(entity).despawn();
     }
@@ -513,23 +518,29 @@ fn test_wave_clear(
 </debug.rs>
 
 <explosion.rs>
-// explosion.rs
-use bevy::prelude::*;
-
 use crate::alien::Alien;
 use crate::assets::GameAssets;
-use crate::components::{Dead, GameEntity, GameState};
-use crate::random::random_colour;
+use crate::audio;
+use crate::components::{Dead, GameEntity, GameSpeed, GameState, PlayerDied};
+use crate::player::Player;
+use crate::random::{random_colour, random_float};
 use crate::resolution::Resolution;
+use bevy::prelude::*;
 use bevy_rand::prelude::{GlobalEntropy, WyRand};
 
 pub struct ExplosionPlugin;
 
 impl Plugin for ExplosionPlugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<PlayerDied>();
         app.add_systems(
             Update,
-            (spawn_explosions, update_explosions)
+            (
+                spawn_alien_explosions,
+                spawn_player_explosions,
+                update_explosions,
+                check_player_explosions,
+            )
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         );
@@ -541,9 +552,12 @@ pub struct Explosion {
     pub timer: f32,
 }
 
+#[derive(Component)]
+pub struct PlayerExplosion;
+
 const EXPLOSION_LIFETIME: f32 = 0.375;
 
-fn spawn_explosions(
+fn spawn_alien_explosions(
     mut commands: Commands,
     dead_aliens: Query<&Transform, (With<Alien>, Added<Dead>)>,
     game_assets: Res<GameAssets>,
@@ -565,6 +579,46 @@ fn spawn_explosions(
     }
 }
 
+const NUM_PLAYER_EXPLOSIONS: i32 = 16;
+
+fn spawn_player_explosions(
+    mut commands: Commands,
+    mut player_died_events: EventReader<PlayerDied>,
+    mut player_query: Query<(Entity, &Transform, &mut Visibility), With<Player>>,
+    game_assets: Res<GameAssets>,
+    resolution: Res<Resolution>,
+    mut rng: GlobalEntropy<WyRand>,
+) {
+    for _ in player_died_events.read() {
+        if let Ok((entity, transform, mut visibility)) = player_query.single_mut() {
+            info!("player died");
+            *visibility = Visibility::Hidden; // hide the player ship whilst the explosions process
+            commands.entity(entity).insert(Dead);
+            audio::play_with_volume(&mut commands, game_assets.player_explosion_sfx.clone(), 0.5);
+            for _ in 0..NUM_PLAYER_EXPLOSIONS {
+                let offset_x = (random_float(&mut rng) - 0.5) * 20.0;
+                let offset_y = (random_float(&mut rng) - 0.5) * 20.0;
+                commands.spawn((
+                    Sprite {
+                        image: game_assets.explosion_texture.clone(),
+                        color: random_colour(&mut rng, &game_assets),
+                        ..Default::default()
+                    },
+                    Transform::from_translation(
+                        transform.translation + Vec3::new(offset_x, offset_y, 0.),
+                    )
+                    .with_scale(Vec3::splat(resolution.pixel_ratio)),
+                    Explosion {
+                        timer: -2. * random_float(&mut rng), // stagger the explosion dissipation over time
+                    },
+                    PlayerExplosion,
+                    GameEntity,
+                ));
+            }
+        }
+    }
+}
+
 fn update_explosions(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Explosion, &mut Sprite)>,
@@ -582,6 +636,19 @@ fn update_explosions(
             };
             sprite.color = sprite.color.with_alpha(alpha);
         }
+    }
+}
+
+fn check_player_explosions(
+    player_explosion_query: Query<Entity, With<PlayerExplosion>>,
+    player_query: Query<&Player, With<Dead>>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut game_speed: ResMut<GameSpeed>,
+) {
+    if !player_query.is_empty() && player_explosion_query.is_empty() {
+        next_state.set(GameState::Title);
+        game_speed.value = 1.0;
+        info!("player dead::switching to title");
     }
 }
 </explosion.rs>
@@ -660,7 +727,6 @@ fn main() {
 </main.rs>
 
 <player.rs>
-// player.rs
 use crate::assets::GameAssets;
 use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, Velocity};
@@ -671,22 +737,15 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PlayerDied>()
-            .add_systems(OnEnter(GameState::Playing), setup_player)
-            .add_systems(
-                Update,
-                (update_player, player_death_handler).run_if(in_state(GameState::Playing)),
-            );
+        app.add_systems(OnEnter(GameState::Playing), setup_player)
+            .add_systems(Update, update_player.run_if(in_state(GameState::Playing)));
     }
 }
 
 #[derive(Component)]
-struct Player {
+pub struct Player {
     pub shoot_timer: f32,
 }
-
-#[derive(Event)]
-pub struct PlayerDied;
 
 #[derive(Resource)]
 pub struct PlayerBulletCount {
@@ -727,7 +786,7 @@ const SHOOT_COOLDOWN: f32 = 0.25;
 fn update_player(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    mut player_query: Query<(&mut Player, &mut Transform)>,
+    mut player_query: Query<(&mut Player, &mut Transform), Without<Dead>>,
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     resolution: Res<resolution::Resolution>,
@@ -757,7 +816,6 @@ fn update_player(
 
         player.shoot_timer -= time.delta_secs();
 
-        // we can shoot whenever if no bullets on screen
         if bullet_count.count == 0 {
             player.shoot_timer = 0.;
         }
@@ -765,7 +823,6 @@ fn update_player(
         if keys.just_pressed(KeyCode::Space) && player.shoot_timer <= 0. && bullet_count.count < 2 {
             player.shoot_timer = SHOOT_COOLDOWN;
 
-            // Play the shoot sound effect
             audio::play(&mut commands, game_assets.shoot_sfx.clone());
 
             commands.spawn((
@@ -790,27 +847,15 @@ fn update_player(
         }
     }
 }
-
-fn player_death_handler(
-    mut events: EventReader<PlayerDied>, // An EventReader for the PlayerDied event
-    mut commands: Commands,
-    player_query: Query<Entity, With<Player>>, // A query that retrieves the Entity ID of entities with the Player component.
-) {
-    for _ in events.read() {
-        if let Ok(player_entity) = player_query.single() {
-            info!("player died");
-            commands.entity(player_entity).insert(Dead);
-        }
-    }
-}
 </player.rs>
 
 <projectile.rs>
-// projectile.rs
 use crate::assets::GameAssets;
 use crate::audio;
-use crate::components::{Collider, ColliderSource, Dead, GameSpeed, GameState, Velocity};
-use crate::player::{PlayerBulletCount, PlayerDied};
+use crate::components::{
+    Collider, ColliderSource, Dead, GameSpeed, GameState, PlayerDied, Velocity,
+};
+use crate::player::PlayerBulletCount;
 use crate::resolution;
 use crate::score::AlienKilled;
 use bevy::prelude::*;
@@ -841,7 +886,6 @@ fn update_collisions(
     mut bullet_count: ResMut<PlayerBulletCount>,
 ) {
     for (projectile_entity, projectile_transform, projectile_collider) in projectile_query.iter() {
-        // Check if projectile is out of bounds, either above or below screen y boundary
         if projectile_transform.translation.y.abs() > resolution.screen_dimensions.y * 0.5 {
             commands.entity(projectile_entity).insert(Dead);
             if projectile_collider.source == ColliderSource::PlayerBullet {
@@ -851,13 +895,11 @@ fn update_collisions(
         }
 
         for (collider_entity, collider_transform, collider_collider) in collider_query.iter() {
-            // player bullets cannot hit player
             if projectile_collider.source == ColliderSource::PlayerBullet
                 && collider_collider.source == ColliderSource::Player
             {
                 continue;
             }
-            // alien bullets cannot hit aliens
             if projectile_collider.source == ColliderSource::AlienBullet
                 && collider_collider.source == ColliderSource::Alien
             {
@@ -886,7 +928,7 @@ fn update_collisions(
                         && collider_collider.source == ColliderSource::Alien
                     {
                         alien_killed_events.write(AlienKilled);
-                        game_speed.value += 0.025; // game gets faster per alien killed
+                        game_speed.value += 0.025;
                         audio::play(&mut commands, game_assets.alien_killed_sfx.clone());
                     }
                 }
@@ -1156,8 +1198,7 @@ fn check_alien_shield_collisions(
 
 <title.rs>
 use crate::assets::GameAssets;
-use crate::components::{ClearCount, GameEntity, GameSpeed, GameState};
-use crate::player::PlayerDied;
+use crate::components::{ClearCount, GameEntity, GameState};
 use bevy::prelude::*;
 use bevy::state::app::AppExtStates;
 
@@ -1171,10 +1212,6 @@ impl Plugin for TitlePlugin {
             .add_systems(
                 Update,
                 handle_title_input.run_if(in_state(GameState::Title)),
-            )
-            .add_systems(
-                Update,
-                player_death_to_title.run_if(in_state(GameState::Playing)),
             );
     }
 }
@@ -1258,17 +1295,6 @@ fn handle_title_input(
     if keys.just_pressed(KeyCode::Space) {
         clear_count.count = 0; // Reset clear count on new game
         next_state.set(GameState::Playing);
-    }
-}
-
-fn player_death_to_title(
-    mut next_state: ResMut<NextState<GameState>>,
-    mut events: EventReader<PlayerDied>,
-    mut game_speed: ResMut<GameSpeed>,
-) {
-    for _ in events.read() {
-        next_state.set(GameState::Title);
-        game_speed.value = 1.0; // reset speed
     }
 }
 

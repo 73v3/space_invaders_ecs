@@ -1,4 +1,3 @@
-// player.rs
 use crate::assets::GameAssets;
 use crate::audio;
 use crate::components::{Collider, ColliderSource, Dead, GameEntity, GameState, Velocity};
@@ -9,22 +8,15 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PlayerDied>()
-            .add_systems(OnEnter(GameState::Playing), setup_player)
-            .add_systems(
-                Update,
-                (update_player, player_death_handler).run_if(in_state(GameState::Playing)),
-            );
+        app.add_systems(OnEnter(GameState::Playing), setup_player)
+            .add_systems(Update, update_player.run_if(in_state(GameState::Playing)));
     }
 }
 
 #[derive(Component)]
-struct Player {
+pub struct Player {
     pub shoot_timer: f32,
 }
-
-#[derive(Event)]
-pub struct PlayerDied;
 
 #[derive(Resource)]
 pub struct PlayerBulletCount {
@@ -65,7 +57,7 @@ const SHOOT_COOLDOWN: f32 = 0.25;
 fn update_player(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    mut player_query: Query<(&mut Player, &mut Transform)>,
+    mut player_query: Query<(&mut Player, &mut Transform), Without<Dead>>,
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     resolution: Res<resolution::Resolution>,
@@ -95,7 +87,6 @@ fn update_player(
 
         player.shoot_timer -= time.delta_secs();
 
-        // we can shoot whenever if no bullets on screen
         if bullet_count.count == 0 {
             player.shoot_timer = 0.;
         }
@@ -103,7 +94,6 @@ fn update_player(
         if keys.just_pressed(KeyCode::Space) && player.shoot_timer <= 0. && bullet_count.count < 2 {
             player.shoot_timer = SHOOT_COOLDOWN;
 
-            // Play the shoot sound effect
             audio::play(&mut commands, game_assets.shoot_sfx.clone());
 
             commands.spawn((
@@ -125,19 +115,6 @@ fn update_player(
             ));
 
             bullet_count.count += 1;
-        }
-    }
-}
-
-fn player_death_handler(
-    mut events: EventReader<PlayerDied>, // An EventReader for the PlayerDied event
-    mut commands: Commands,
-    player_query: Query<Entity, With<Player>>, // A query that retrieves the Entity ID of entities with the Player component.
-) {
-    for _ in events.read() {
-        if let Ok(player_entity) = player_query.single() {
-            info!("player died");
-            commands.entity(player_entity).insert(Dead);
         }
     }
 }
